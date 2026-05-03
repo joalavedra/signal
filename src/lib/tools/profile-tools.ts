@@ -1,5 +1,6 @@
 import { tool } from "ai";
 import { z } from "zod";
+import { auth } from "@clerk/nextjs/server";
 import { createClient } from "@/lib/supabase/server";
 
 export const updateUserProfile = tool({
@@ -67,10 +68,12 @@ export const updateUserProfile = tool({
       return { profile, action: "updated", updated: Object.keys(fields) };
     }
 
-    // Create new profile
+    const { userId } = await auth();
+    if (!userId) throw new Error("Not authenticated");
+
     const { data: profile, error } = await supabase
       .from("user_profile")
-      .insert(fields)
+      .insert({ ...fields, user_id: userId })
       .select("*")
       .single();
 
