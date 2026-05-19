@@ -4,17 +4,40 @@ import {
   upsertCompany,
   findCompanyByDomain,
   upsertListEntry,
-  updateListEntryStage,
-  findListEntryByRecord,
   getListIdBySlug,
   type OutreachStage,
 } from "@/lib/services/attio-service";
 
-const SIGNAL_OUTREACH_LIST_SLUG = "signal_outreach";
+const DEFAULT_LIST_SLUG = "signal_outreach";
+const DEFAULT_STAGE_ATTR = "stage";
+
+function getListSlug(): string {
+  return process.env.ATTIO_OUTREACH_LIST_SLUG ?? DEFAULT_LIST_SLUG;
+}
+
+function getStageAttr(): string {
+  return process.env.ATTIO_OUTREACH_STAGE_ATTR ?? DEFAULT_STAGE_ATTR;
+}
 
 function isConfigured(): boolean {
   return Boolean(process.env.ATTIO_API_TOKEN);
 }
+
+/**
+ * Convert an OutreachStage enum to the literal title stored in Attio.
+ * Attio's status attributes match by title (case-sensitive), so we
+ * mirror exactly what the user configured on the list.
+ */
+const STAGE_TITLE: Record<OutreachStage, string> = {
+  discovered: "Discovered",
+  approved: "Approved",
+  in_sequence: "in_sequence",
+  sent: "sent",
+  opened: "opened",
+  replied: "replied",
+  bounced: "bounced",
+  completed: "completed",
+};
 
 /**
  * Map Signal's outreach_status to the Attio list stage. Returns null when
@@ -96,56 +119,51 @@ export async function syncCampaignPersonToCrm(
     if (!person) return;
 
     const email = person.work_email ?? person.personal_email;
-    if (!email) {
-      console.warn(
-        `[attio-sync] skipping ${campaignPeopleId}: no email on person ${person.id}`,
-      );
-      return;
-    }
 
     const org = Array.isArray(person.organization)
       ? person.organization[0]
       : person.organization;
 
-    if (org?.domain) {
-      await upsertCompany({
-        name: org.name ?? org.domain,
-        domain: org.domain,
-        description: org.description ?? undefined,
-      });
-    }
-
-    const attioPerson = await upsertPerson({
-      name: person.name,
-      email,
-      linkedinUrl: person.linkedin_url ?? undefined,
-      jobTitle: person.title ?? undefined,
-      companyDomain: org?.domain ?? undefined,
-    });
-
-    const listId = await getListIdBySlug(SIGNAL_OUTREACH_LIST_SLUG);
-    if (!listId) {
+    if (!org?.domain) {
       console.warn(
-        `[attio-sync] list '${SIGNAL_OUTREACH_LIST_SLUG}' not found — create it in Attio with a 'stage' status attribute`,
+        `[attio-sync] skipping ${campaignPeopleId}: no organization domain — list is company-parented`,
       );
       return;
     }
 
-    const existing = await findListEntryByRecord(
-      listId,
-      attioPerson.id.record_id,
-    );
+    const company = await upsertCompany({
+      name: org.name ?? org.domain,
+      domain: org.domain,
+      description: org.description ?? undefined,
+    });
 
-    if (existing) {
-      await updateListEntryStage(listId, existing.id.entry_id, stage);
-    } else {
-      await upsertListEntry({
-        listId,
-        recordId: attioPerson.id.record_id,
-        parentObject: "people",
-        stage,
+    if (email) {
+      await upsertPerson({
+        name: person.name,
+        email,
+        linkedinUrl: person.linkedin_url ?? undefined,
+        jobTitle: person.title ?? undefined,
+        companyDomain: org.domain,
       });
     }
+
+    const listSlug = getListSlug();
+    const stageAttr = getStageAttr();
+    const listId = await getListIdBySlug(listSlug);
+    if (!listId) {
+      console.warn(
+        `[attio-sync] list '${listSlug}' not found — set ATTIO_OUTREACH_LIST_SLUG to your list's api_slug`,
+      );
+      return;
+    }
+
+    await upsertListEntry({
+      listId,
+      recordId: company.id.record_id,
+      parentObject: "companies",
+      stageAttr,
+      stageValue: STAGE_TITLE[stage],
+    });
   } catch (err) {
     console.error(
       `[attio-sync] syncCampaignPersonToCrm(${campaignPeopleId}, ${stage}) failed:`,
