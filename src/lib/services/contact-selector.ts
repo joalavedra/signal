@@ -1,7 +1,6 @@
 import { generateObject } from "ai";
-import { anthropic } from "@ai-sdk/anthropic";
 import { z } from "zod";
-import { MODELS } from "@/lib/ai/models";
+import { llm, MODELS } from "@/lib/ai/models";
 import {
   estimateClaudeCostFromUsage,
   trackUsage,
@@ -88,7 +87,7 @@ export async function selectContactsForSignal(
     .join("\n\n");
 
   const { object, usage } = await generateObject({
-    model: anthropic(MODELS.LIGHT),
+    model: llm(MODELS.LIGHT),
     schema: verdictSchema,
     prompt: `You are picking the best contact(s) to email at a company after a buying-signal fired. You have the reason the signal fired (in the buyer's own words, via an upstream LLM) and a list of known contacts at the company.
 

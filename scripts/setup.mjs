@@ -169,7 +169,10 @@ async function promptRequired() {
   const supaService = await ask("Supabase service_role key (secret)", {
     secret: true,
   });
-  const anthropic = await ask("Anthropic API key (sk-ant-api...)", {
+  const deepseek = await ask("DeepSeek API key (sk-...)", {
+    secret: true,
+  });
+  const gemini = await ask("Google Gemini API key (for Stagehand vision)", {
     secret: true,
   });
 
@@ -182,7 +185,8 @@ async function promptRequired() {
   );
   content = setEnvKey(content, "SUPABASE_ANON_KEY", supaPub);
   content = setEnvKey(content, "SUPABASE_SERVICE_ROLE_KEY", supaService);
-  content = setEnvKey(content, "ANTHROPIC_API_KEY", anthropic);
+  content = setEnvKey(content, "DEEPSEEK_API_KEY", deepseek);
+  content = setEnvKey(content, "GEMINI_API_KEY", gemini);
 
   writeEnvLocal(content);
   log.ok("Required keys written.");

@@ -1,12 +1,11 @@
 import { generateObject } from "ai";
-import { anthropic } from "@ai-sdk/anthropic";
 import {
   ComposedEmailSchema,
   buildComposeUserPrompt,
   buildEmailSystemPrompt,
   type ComposedEmail,
 } from "./skill";
-import { MODELS } from "@/lib/ai/models";
+import { llm, MODELS } from "@/lib/ai/models";
 import type { EmailSkill } from "@/lib/types/email-skill";
 
 type UserPromptInput = Parameters<typeof buildComposeUserPrompt>[0];
@@ -37,16 +36,10 @@ export async function composeEmail(
   try {
     const { skills, ...userPromptInput } = input;
     const { object } = await generateObject({
-      model: anthropic(MODELS.EMAIL),
+      model: llm(MODELS.EMAIL),
       schema: ComposedEmailSchema,
       system: buildEmailSystemPrompt(skills ?? []),
       prompt: buildComposeUserPrompt(userPromptInput),
-      providerOptions: {
-        anthropic: {
-          // Cache the stable system prompt across the fan-out batch.
-          cacheControl: { type: "ephemeral" },
-        },
-      },
       maxOutputTokens: 1200,
     });
     return { ok: true, email: object };
