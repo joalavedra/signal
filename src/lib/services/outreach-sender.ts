@@ -1,6 +1,7 @@
 import { getAdminClient } from "@/lib/supabase/admin";
 import { sendMessage } from "@/lib/services/agentmail-service";
 import { trackUsage } from "@/lib/services/cost-tracker";
+import { syncOutreachStatusChange } from "@/lib/sync/attio-sync";
 
 export interface EnrollmentForSend {
   id: string;
@@ -98,6 +99,8 @@ export async function sendApprovedDraft(
       .from("campaign_people")
       .update({ outreach_status: "sent" })
       .eq("id", enrollment.campaign_people_id);
+
+    void syncOutreachStatusChange(enrollment.campaign_people_id, "sent");
 
     const nextStep = enrollment.current_step + 1;
     const { data: nextStepRow } = await supabase
