@@ -17,6 +17,10 @@ import {
   linkPersonToCampaign,
   mergeEnrichmentData,
 } from "@/lib/services/knowledge-base";
+import {
+  syncCampaignPersonToCrm,
+  checkAttioDedup,
+} from "@/lib/sync/attio-sync";
 
 function fullName(p: ApolloPerson): string {
   if (p.name) return p.name;
@@ -94,6 +98,7 @@ export const apolloSearchPeople = tool({
     }
 
     const stored = [];
+    const alreadyInCrm: string[] = [];
     for (const p of people) {
       let organizationId: string | null = null;
       if (p.organization?.name) {
@@ -104,6 +109,12 @@ export const apolloSearchPeople = tool({
           source: "apollo",
         });
         organizationId = org.id;
+        if (p.organization.primary_domain) {
+          const dedup = await checkAttioDedup(p.organization.primary_domain);
+          if (dedup?.existsInCrm) {
+            alreadyInCrm.push(p.organization.name);
+          }
+        }
       }
 
       const person = await findOrCreatePerson({
@@ -140,7 +151,18 @@ export const apolloSearchPeople = tool({
       });
     }
 
-    return { ok: true, total, stored: stored.length, people: stored };
+    const unique = Array.from(new Set(alreadyInCrm));
+    return {
+      ok: true,
+      total,
+      stored: stored.length,
+      people: stored,
+      ...(unique.length > 0
+        ? {
+            warning: `${unique.length} compan${unique.length === 1 ? "y" : "ies"} already exist in Attio CRM: ${unique.join(", ")}. Consider whether to prospect them or not.`,
+          }
+        : {}),
+    };
   },
 });
 
@@ -389,6 +411,10 @@ export const pushToApolloSequence = tool({
       .from("campaign_people")
       .update({ outreach_status: "queued" })
       .in("id", campaignPeopleIds);
+
+    for (const id of campaignPeopleIds) {
+      void syncCampaignPersonToCrm(id, "in_sequence");
+    }
 
     return {
       ok: true,

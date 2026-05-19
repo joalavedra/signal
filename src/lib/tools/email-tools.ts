@@ -4,6 +4,7 @@ import { createClient, getSupabaseAndUser } from "@/lib/supabase/server";
 import { ExaService } from "@/lib/services/exa-service";
 import { sendMessage } from "@/lib/services/agentmail-service";
 import { trackUsage } from "@/lib/services/cost-tracker";
+import { syncOutreachStatusChange } from "@/lib/sync/attio-sync";
 import { saveDraft } from "@/lib/email-composition/save";
 import {
   applyPattern,
@@ -457,6 +458,8 @@ export const sendEmail = tool({
       .from("campaign_people")
       .update({ outreach_status: "sent" })
       .eq("id", draft.campaign_people_id);
+
+    void syncOutreachStatusChange(draft.campaign_people_id, "sent");
 
     trackUsage({
       service: "agentmail",
