@@ -1,8 +1,7 @@
-import { anthropic } from "@ai-sdk/anthropic";
 import { generateObject } from "ai";
 import { z } from "zod";
 
-import { MODELS } from "@/lib/ai/models";
+import { llm, MODELS } from "@/lib/ai/models";
 import {
   estimateClaudeCostFromUsage,
   trackUsage,
@@ -42,7 +41,7 @@ export async function summarizeWebsite(input: {
 
   try {
     const { object, usage } = await generateObject({
-      model: anthropic(MODEL_ID),
+      model: llm(MODEL_ID),
       schema: z.object({
         summary: z
           .string()
@@ -140,7 +139,7 @@ export async function summarizePerson(
 
   try {
     const { object, usage } = await generateObject({
-      model: anthropic(MODEL_ID),
+      model: llm(MODEL_ID),
       schema: z.object({
         summary: z
           .string()
@@ -194,7 +193,7 @@ export async function summarizeSearchResults<T extends SearchResultLike>(
 
   try {
     const { object, usage } = await generateObject({
-      model: anthropic(MODEL_ID),
+      model: llm(MODEL_ID),
       schema: z.object({
         summaries: z.array(
           z.object({

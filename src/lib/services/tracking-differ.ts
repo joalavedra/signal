@@ -1,8 +1,7 @@
 import { createHash } from "node:crypto";
 import { generateObject } from "ai";
-import { anthropic } from "@ai-sdk/anthropic";
 import { z } from "zod";
-import { MODELS } from "@/lib/ai/models";
+import { llm, MODELS } from "@/lib/ai/models";
 import {
   estimateClaudeCostFromUsage,
   trackUsage,
@@ -128,7 +127,7 @@ export async function classifyNewRoles(
   if (jobs.length === 0) return [];
 
   const { object, usage } = await generateObject({
-    model: anthropic(MODELS.LIGHT),
+    model: llm(MODELS.LIGHT),
     schema: z.object({
       classifications: z.array(
         z.object({

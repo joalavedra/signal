@@ -1,7 +1,6 @@
-import { anthropic } from "@ai-sdk/anthropic";
 import { generateObject } from "ai";
 import { z } from "zod";
-import { MODELS } from "@/lib/ai/models";
+import { llm, MODELS } from "@/lib/ai/models";
 import {
   estimateClaudeCostFromUsage,
   trackUsage,
@@ -80,7 +79,7 @@ export async function classifyPeople(
     );
 
     const { object, usage } = await generateObject({
-      model: anthropic(MODELS.STRUCTURED),
+      model: llm(MODELS.STRUCTURED),
       schema: ResponseSchema,
       prompt: `You are categorising employees of ${stringify(companyName)} into departments and seniority levels for an org chart.
 

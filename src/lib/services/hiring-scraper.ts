@@ -30,13 +30,13 @@ export async function scrapeHiringData(
 ): Promise<HiringScrapeResult> {
   const apiKey = process.env.BROWSERBASE_API_KEY;
   const projectId = process.env.BROWSERBASE_PROJECT_ID;
-  const anthropicKey = process.env.ANTHROPIC_API_KEY;
+  const geminiKey = process.env.GEMINI_API_KEY;
 
-  if (!apiKey || !projectId || !anthropicKey) {
+  if (!apiKey || !projectId || !geminiKey) {
     const missing = [
       !apiKey && "BROWSERBASE_API_KEY",
       !projectId && "BROWSERBASE_PROJECT_ID",
-      !anthropicKey && "ANTHROPIC_API_KEY",
+      !geminiKey && "GEMINI_API_KEY",
     ]
       .filter(Boolean)
       .join(", ");
@@ -49,7 +49,7 @@ export async function scrapeHiringData(
     env: "BROWSERBASE",
     apiKey,
     projectId,
-    model: { modelName: `anthropic/${MODELS.BROWSER}`, apiKey: anthropicKey },
+    model: { modelName: `google/${MODELS.BROWSER}`, apiKey: geminiKey },
     disablePino: true,
   });
 
