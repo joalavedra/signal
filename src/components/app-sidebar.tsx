@@ -16,6 +16,7 @@ import {
 
 import { NavUser } from "@/components/nav-user";
 import { SidebarCampaigns } from "@/components/sidebar-campaigns";
+import { SidebarChats } from "@/components/sidebar-chats";
 import { useCampaign } from "@/lib/campaign-context";
 import {
   Sidebar,
@@ -113,6 +114,10 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        <SidebarSeparator />
+
+        <SidebarChats />
 
         <SidebarSeparator />
 
