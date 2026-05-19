@@ -79,9 +79,19 @@ import {
   deleteEmailSkill,
   toggleEmailSkill,
 } from "./email-skill-tools";
+import {
+  apolloSearchPeople,
+  apolloEnrichPerson,
+  listApolloSequences,
+  pushToApolloSequence,
+} from "./apollo-tools";
 import { getPostHogClient } from "@/lib/posthog-server";
 
 const rawTools = {
+  apolloSearchPeople,
+  apolloEnrichPerson,
+  listApolloSequences,
+  pushToApolloSequence,
   saveCampaign,
   getCampaign,
   listCampaigns,
