@@ -109,7 +109,16 @@ export async function upsertPerson(input: {
   const values: Record<string, unknown> = {
     email_addresses: [input.email],
   };
-  if (input.name) values.name = [{ full_name: input.name }];
+  if (input.name) {
+    const [first, ...rest] = input.name.trim().split(/\s+/);
+    values.name = [
+      {
+        first_name: first ?? input.name,
+        last_name: rest.join(" "),
+        full_name: input.name,
+      },
+    ];
+  }
   if (input.linkedinUrl) values.linkedin = input.linkedinUrl;
   if (input.jobTitle) values.job_title = input.jobTitle;
 
@@ -186,26 +195,29 @@ export async function getListIdBySlug(apiSlug: string): Promise<string | null> {
 }
 
 /**
- * Add a record to a list (or return existing entry if already present),
- * setting the initial stage. Attio's list_entry endpoint is idempotent
- * when matched on parent_record_id.
+ * Idempotent upsert of a list entry, matched by parent_record_id.
+ * Same parent + same list = same entry. Subsequent calls patch entry_values.
+ *
+ * Attio's `PUT /lists/{id}/entries?matching_attribute=parent_record_id` is
+ * the assert endpoint — no separate find/create/update dance needed.
  */
 export async function upsertListEntry(input: {
   listId: string;
   recordId: string;
   parentObject: "people" | "companies";
-  stage: OutreachStage;
+  stageAttr: string;
+  stageValue: string;
   extraValues?: Record<string, unknown>;
 }): Promise<AttioListEntry> {
   const data = await attioRequest<{ data: AttioListEntry }>(
-    "POST",
-    `/lists/${input.listId}/entries`,
+    "PUT",
+    `/lists/${input.listId}/entries?matching_attribute=parent_record_id`,
     {
       data: {
         parent_record_id: input.recordId,
         parent_object: input.parentObject,
         entry_values: {
-          stage: input.stage,
+          [input.stageAttr]: input.stageValue,
           ...(input.extraValues ?? {}),
         },
       },
@@ -213,41 +225,4 @@ export async function upsertListEntry(input: {
     "upsert_list_entry",
   );
   return data.data;
-}
-
-/**
- * Update a list entry's stage (used as outreach events fire).
- */
-export async function updateListEntryStage(
-  listId: string,
-  entryId: string,
-  stage: OutreachStage,
-): Promise<AttioListEntry> {
-  const data = await attioRequest<{ data: AttioListEntry }>(
-    "PATCH",
-    `/lists/${listId}/entries/${entryId}`,
-    { data: { entry_values: { stage } } },
-    "update_list_entry_stage",
-  );
-  return data.data;
-}
-
-/**
- * Find a list entry by parent record. Returns null if the record isn't in
- * the list yet — caller can then call upsertListEntry to add it.
- */
-export async function findListEntryByRecord(
-  listId: string,
-  recordId: string,
-): Promise<AttioListEntry | null> {
-  const data = await attioRequest<{ data: AttioListEntry[] }>(
-    "POST",
-    `/lists/${listId}/entries/query`,
-    {
-      filter: { parent_record_id: recordId },
-      limit: 1,
-    },
-    "find_list_entry",
-  );
-  return data.data[0] ?? null;
 }
