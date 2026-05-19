@@ -217,6 +217,35 @@ export const INTEGRATIONS: Integration[] = [
     fixHint: "Add `APIFY_API_TOKEN=apify_api_...` to .env.local",
   },
   {
+    id: "apollo",
+    name: "Apollo.io",
+    category: "enrichment",
+    severity: "optional",
+    feature:
+      "Verified contact discovery + Apollo Sequences (optional outreach engine)",
+    consequence:
+      "People search falls back to Exa; cannot push contacts to Apollo Sequences.",
+    envVars: ["APOLLO_API_KEY"],
+    signupUrl: "https://apollo.io",
+    keysUrl: "https://app.apollo.io/#/settings/integrations/api",
+    fixHint:
+      "Add `APOLLO_API_KEY=...` to .env.local. Toggle 'Set as master key' when creating it — sequence endpoints require it.",
+  },
+  {
+    id: "attio",
+    name: "Attio",
+    category: "enrichment",
+    severity: "optional",
+    feature:
+      "CRM source-of-truth sync (People, Companies, signal_outreach list)",
+    consequence:
+      "Approved contacts and outreach events stay in Signal only; no CRM mirror.",
+    envVars: ["ATTIO_API_TOKEN"],
+    signupUrl: "https://attio.com",
+    keysUrl: "https://app.attio.com/settings/developers/api-keys",
+    fixHint: "Add `ATTIO_API_TOKEN=...` to .env.local",
+  },
+  {
     id: "github",
     name: "GitHub",
     category: "enrichment",
