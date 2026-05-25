@@ -10,7 +10,7 @@ export const MODELS = {
 
   EMAIL: "deepseek-chat",
 
-  BROWSER: "gemini-2.0-flash-exp",
+  BROWSER: "gemini-2.5-flash",
   STRUCTURED: "deepseek-chat",
 
   LIGHT: "deepseek-chat",
