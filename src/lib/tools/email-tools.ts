@@ -1,6 +1,7 @@
 import { tool } from "ai";
 import { z } from "zod";
-import { createClient, getSupabaseAndUser } from "@/lib/supabase/server";
+import { getSupabaseAndUser } from "@/lib/supabase/server";
+import { getAdminClient } from "@/lib/supabase/admin";
 import { ExaService } from "@/lib/services/exa-service";
 import { sendMessage } from "@/lib/services/agentmail-service";
 import { trackUsage } from "@/lib/services/cost-tracker";
@@ -35,7 +36,7 @@ export async function findEmailForPerson(personId: string): Promise<{
   reason?: string;
   personId: string;
 }> {
-  const supabase = await createClient();
+  const supabase = getAdminClient();
 
   const { data: person, error: personErr } = await supabase
     .from("people")
@@ -386,7 +387,7 @@ export const sendEmail = tool({
     draftId: z.string().uuid().describe("Draft ID to send."),
   }),
   execute: async ({ draftId }) => {
-    const supabase = await createClient();
+    const supabase = getAdminClient();
 
     const { data: draft, error: draftErr } = await supabase
       .from("email_drafts")
@@ -493,7 +494,7 @@ export const listDrafts = tool({
       .describe("Filter drafts by campaign ID."),
   }),
   execute: async ({ campaignId }) => {
-    const supabase = await createClient();
+    const supabase = getAdminClient();
 
     let query = supabase
       .from("email_drafts")
@@ -522,7 +523,7 @@ export const discardDraft = tool({
     draftId: z.string().uuid().describe("Draft ID to discard."),
   }),
   execute: async ({ draftId }) => {
-    const supabase = await createClient();
+    const supabase = getAdminClient();
 
     const { error } = await supabase
       .from("email_drafts")
@@ -553,7 +554,7 @@ export const sendBulkEmails = tool({
       ),
   }),
   execute: async ({ campaignId, draftIds }) => {
-    const supabase = await createClient();
+    const supabase = getAdminClient();
 
     let query = supabase
       .from("email_drafts")

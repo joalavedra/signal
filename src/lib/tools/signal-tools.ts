@@ -5,7 +5,7 @@ import { z } from "zod";
 import { getRecipe, hasRecipe, listRecipeSlugs } from "@/lib/signals/recipes";
 import { executeSignal } from "@/lib/signals/executor";
 import { runRecipe } from "@/lib/signals/runner";
-import { createClient } from "@/lib/supabase/server";
+import { getAdminClient } from "@/lib/supabase/admin";
 import type { Signal } from "@/lib/types/signal";
 
 export const getSignalAuthoringGuide = tool({
@@ -63,7 +63,7 @@ export const testSignalRecipe = tool({
       throw new Error("Provide either organizationId or domain");
     }
 
-    const supabase = await createClient();
+    const supabase = getAdminClient();
 
     // Resolve company context
     let companyName: string;
@@ -186,7 +186,7 @@ export const getSignals = tool({
       .describe("Filter by category. Omit to get all signals."),
   }),
   execute: async (input) => {
-    const supabase = await createClient();
+    const supabase = getAdminClient();
     let query = supabase
       .from("signals")
       .select("id, name, category, description, is_builtin")
@@ -221,7 +221,7 @@ export const getSignalDetail = tool({
     signalId: z.string().uuid().describe("signals.id"),
   }),
   execute: async ({ signalId }) => {
-    const supabase = await createClient();
+    const supabase = getAdminClient();
     const { data, error } = await supabase
       .from("signals")
       .select("*")
@@ -241,7 +241,7 @@ export const getCampaignSignals = tool({
     campaignId: z.string().uuid().describe("Campaign ID"),
   }),
   execute: async (input) => {
-    const supabase = await createClient();
+    const supabase = getAdminClient();
 
     // Get all signals
     const { data: allSignals, error: sigErr } = await supabase
@@ -297,7 +297,7 @@ export const toggleCampaignSignal = tool({
       .describe("Whether to enable (true) or disable (false) the signal"),
   }),
   execute: async (input) => {
-    const supabase = await createClient();
+    const supabase = getAdminClient();
 
     const { data, error } = await supabase
       .from("campaign_signals")
@@ -365,7 +365,7 @@ export const createSignal = tool({
       ),
   }),
   execute: async (input) => {
-    const supabase = await createClient();
+    const supabase = getAdminClient();
 
     const { data, error } = await supabase
       .from("signals")
@@ -427,7 +427,7 @@ export const updateSignal = tool({
       .describe("Replacement execution config (full object, not a merge)"),
   }),
   execute: async (input) => {
-    const supabase = await createClient();
+    const supabase = getAdminClient();
     const patch: Record<string, unknown> = {};
     if (input.name !== undefined) patch.name = input.name;
     if (input.description !== undefined) patch.description = input.description;
@@ -469,7 +469,7 @@ export const makeSignalPublic = tool({
     isPublic: z.boolean().describe("true to publish, false to unpublish"),
   }),
   execute: async (input) => {
-    const supabase = await createClient();
+    const supabase = getAdminClient();
 
     const { data, error } = await supabase
       .from("signals")
@@ -524,7 +524,7 @@ export const getSignalResults = tool({
       };
     }
 
-    const supabase = await createClient();
+    const supabase = getAdminClient();
 
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - input.maxAgeDays);

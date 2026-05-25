@@ -1,6 +1,7 @@
 import { tool } from "ai";
 import { z } from "zod";
-import { createClient, getSupabaseAndUser } from "@/lib/supabase/server";
+import { getSupabaseAndUser } from "@/lib/supabase/server";
+import { getAdminClient } from "@/lib/supabase/admin";
 
 const scopeEnum = z.enum(["user", "profile", "campaign"]);
 
@@ -27,7 +28,7 @@ export const listEmailSkills = tool({
       .describe("Scope ID to check attachments against."),
   }),
   execute: async ({ scopeType, scopeId }) => {
-    const supabase = await createClient();
+    const supabase = getAdminClient();
     const { data: skills, error } = await supabase
       .from("email_skills")
       .select("id, name, slug, description, instructions, is_builtin, user_id")
@@ -66,7 +67,7 @@ export const getEmailSkillDetail = tool({
     skillId: z.string().uuid().describe("email_skills.id"),
   }),
   execute: async ({ skillId }) => {
-    const supabase = await createClient();
+    const supabase = getAdminClient();
     const { data, error } = await supabase
       .from("email_skills")
       .select("*")
@@ -137,7 +138,7 @@ export const updateEmailSkill = tool({
     instructions: z.string().optional(),
   }),
   execute: async (input) => {
-    const supabase = await createClient();
+    const supabase = getAdminClient();
     const patch: Record<string, unknown> = {};
     if (input.name !== undefined) patch.name = input.name;
     if (input.description !== undefined) patch.description = input.description;
@@ -172,7 +173,7 @@ export const deleteEmailSkill = tool({
     skillId: z.string().uuid(),
   }),
   execute: async ({ skillId }) => {
-    const supabase = await createClient();
+    const supabase = getAdminClient();
     const { error } = await supabase
       .from("email_skills")
       .delete()
@@ -198,7 +199,7 @@ export const toggleEmailSkill = tool({
     enabled: z.boolean().default(true),
   }),
   execute: async (input) => {
-    const supabase = await createClient();
+    const supabase = getAdminClient();
     const { data, error } = await supabase
       .from("email_skill_attachments")
       .upsert(

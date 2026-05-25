@@ -1,6 +1,6 @@
 import { tool } from "ai";
 import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
+import { getAdminClient } from "@/lib/supabase/admin";
 import {
   findOrCreateOrganization,
   linkOrganizationToCampaign,
@@ -73,7 +73,7 @@ async function findOrCreateGitHubPerson(profile: {
   starred_at?: string;
   source: string;
 }): Promise<string> {
-  const supabase = await createClient();
+  const supabase = getAdminClient();
 
   // Dedup by github_url
   const { data: existing } = await supabase
@@ -297,7 +297,7 @@ export const fetchGitHubStargazers = tool({
 
     // 4. Store in signal_results
     if (input.campaignId) {
-      const supabase = await createClient();
+      const supabase = getAdminClient();
       const { data: signal } = await supabase
         .from("signals")
         .select("id")

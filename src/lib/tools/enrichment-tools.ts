@@ -1,6 +1,6 @@
 import { tool } from "ai";
 import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
+import { getAdminClient } from "@/lib/supabase/admin";
 import { parseLinkedInTitle } from "@/lib/utils";
 import { ExaService } from "@/lib/services/exa-service";
 import { filterRelevantResults } from "@/lib/services/relevance-filter";
@@ -68,7 +68,7 @@ export const searchPeople = tool({
   }),
   execute: async (input) => {
     const exa = new ExaService();
-    const supabase = await createClient();
+    const supabase = getAdminClient();
 
     const searchResponse = await exa.search(input.query, {
       numResults: input.numResults,
@@ -240,7 +240,7 @@ async function enrichContactById(
   skipped?: boolean;
   errors?: string[];
 }> {
-  const supabase = await createClient();
+  const supabase = getAdminClient();
 
   // Check recency -- skip if recently enriched
   const recent = await isRecentlyEnriched("people", personId);
@@ -851,22 +851,31 @@ export const scrapeJobListingsBatch = tool({
   execute: async (input) => {
     const { scrapeHiringData } = await import("@/lib/services/hiring-scraper");
 
-    const results = await Promise.allSettled(
-      input.companies.map(async (company) => {
-        const result = await scrapeHiringData(
-          company.organizationId,
-          company.domain,
-          input.maxJobs,
-        );
-        return {
-          organizationId: company.organizationId,
-          domain: company.domain,
-          careersUrl: result.careersUrl,
-          totalJobs: result.totalJobs,
-          jobs: result.jobs,
-        };
-      }),
+    // Browserbase plans cap concurrent browser sessions (free tier = 1), so run
+    // in bounded chunks instead of one session per company. Override with
+    // BROWSERBASE_MAX_CONCURRENCY once you've raised your plan's limit.
+    const concurrency = Math.max(
+      1,
+      Number(process.env.BROWSERBASE_MAX_CONCURRENCY) || 1,
     );
+    const run = (company: (typeof input.companies)[number]) =>
+      scrapeHiringData(
+        company.organizationId,
+        company.domain,
+        input.maxJobs,
+      ).then((result) => ({
+        organizationId: company.organizationId,
+        domain: company.domain,
+        careersUrl: result.careersUrl,
+        totalJobs: result.totalJobs,
+        jobs: result.jobs,
+      }));
+
+    const results: PromiseSettledResult<Awaited<ReturnType<typeof run>>>[] = [];
+    for (let i = 0; i < input.companies.length; i += concurrency) {
+      const slice = input.companies.slice(i, i + concurrency);
+      results.push(...(await Promise.allSettled(slice.map(run))));
+    }
 
     const succeeded: Array<{
       organizationId: string;
@@ -911,7 +920,7 @@ export const scrapeJobListingsBatch = tool({
 });
 
 async function resolveOrganizationId(idOrLinkId: string): Promise<string> {
-  const supabase = await createClient();
+  const supabase = getAdminClient();
 
   // Try as organization ID first
   const { data: directOrg } = await supabase
@@ -969,7 +978,7 @@ async function enrichCompanyById(
   icp?: Record<string, unknown>;
   errors?: string[];
 }> {
-  const supabase = await createClient();
+  const supabase = getAdminClient();
   const organizationId = await resolveOrganizationId(companyIdOrLinkId);
 
   // Check recency -- skip if recently enriched
@@ -1265,7 +1274,7 @@ export const findContacts = tool({
       );
     }
 
-    const supabase = await createClient();
+    const supabase = getAdminClient();
     const exa = new ExaService();
 
     // Resolve target titles from campaign ICP or explicit input
@@ -1528,7 +1537,7 @@ export const getContacts = tool({
       .describe("Filter by campaign-organization link ID"),
   }),
   execute: async (input) => {
-    const supabase = await createClient();
+    const supabase = getAdminClient();
 
     const query = supabase
       .from("campaign_people")
@@ -1610,7 +1619,7 @@ export const getContactDetail = tool({
       .describe("People table ID (person_id, not campaign_people.id)."),
   }),
   execute: async ({ personId }) => {
-    const supabase = await createClient();
+    const supabase = getAdminClient();
 
     const { data, error } = await supabase
       .from("people")
@@ -1649,7 +1658,7 @@ export const deleteCompanies = tool({
       .describe("Array of campaign-organization link IDs to remove"),
   }),
   execute: async (input) => {
-    const supabase = await createClient();
+    const supabase = getAdminClient();
 
     // Get organization_ids to unlink their people too
     const { data: links } = await supabase
@@ -1701,7 +1710,7 @@ export const deleteContacts = tool({
       .describe("Array of campaign-people link IDs to remove"),
   }),
   execute: async (input) => {
-    const supabase = await createClient();
+    const supabase = getAdminClient();
 
     const { error } = await supabase
       .from("campaign_people")
@@ -1740,7 +1749,7 @@ export const scoreCompany = tool({
       ),
   }),
   execute: async (input) => {
-    const supabase = await createClient();
+    const supabase = getAdminClient();
     const { error } = await supabase
       .from("campaign_organizations")
       .update({
@@ -1778,7 +1787,7 @@ export const scoreContact = tool({
       ),
   }),
   execute: async (input) => {
-    const supabase = await createClient();
+    const supabase = getAdminClient();
     const { error } = await supabase
       .from("campaign_people")
       .update({
@@ -1809,7 +1818,7 @@ export const updateCompanyStatus = tool({
       .describe("New status to set"),
   }),
   execute: async (input) => {
-    const supabase = await createClient();
+    const supabase = getAdminClient();
 
     const { error } = await supabase
       .from("campaign_organizations")
@@ -1871,7 +1880,7 @@ export const getGoogleReviews = tool({
     }
 
     if (input.campaignId) {
-      const supabase = await createClient();
+      const supabase = getAdminClient();
       const { data: signal } = await supabase
         .from("signals")
         .select("id")

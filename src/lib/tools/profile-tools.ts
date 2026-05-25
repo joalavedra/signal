@@ -1,7 +1,7 @@
 import { tool } from "ai";
 import { z } from "zod";
 import { auth } from "@clerk/nextjs/server";
-import { createClient } from "@/lib/supabase/server";
+import { getAdminClient } from "@/lib/supabase/admin";
 
 export const updateUserProfile = tool({
   description:
@@ -40,7 +40,7 @@ export const updateUserProfile = tool({
       ),
   }),
   execute: async (input) => {
-    const supabase = await createClient();
+    const supabase = getAdminClient();
     const { profileId, ...rest } = input;
 
     const fields: Record<string, string> = {};
@@ -98,7 +98,7 @@ export const getUserProfile = tool({
       .describe("Campaign ID -- returns the profile linked to this campaign."),
   }),
   execute: async (input) => {
-    const supabase = await createClient();
+    const supabase = getAdminClient();
 
     // By specific profile ID
     if (input.profileId) {
@@ -164,7 +164,7 @@ export const listProfiles = tool({
     "List all user profiles. Each profile represents a different seller identity the user can link to campaigns.",
   inputSchema: z.object({}),
   execute: async () => {
-    const supabase = await createClient();
+    const supabase = getAdminClient();
 
     const { data, error } = await supabase
       .from("user_profile")

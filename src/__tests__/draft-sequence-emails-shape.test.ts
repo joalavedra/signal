@@ -78,10 +78,8 @@ const mockFrom = vi.fn((table: string) => {
   throw new Error(`unexpected table ${table}`);
 });
 
-vi.mock("@/lib/supabase/server", () => ({
-  createClient: vi
-    .fn()
-    .mockResolvedValue({ from: (table: string) => mockFrom(table) }),
+vi.mock("@/lib/supabase/admin", () => ({
+  getAdminClient: vi.fn(() => ({ from: (table: string) => mockFrom(table) })),
 }));
 
 import { draftSequenceEmails } from "@/lib/tools/sequence-tools";

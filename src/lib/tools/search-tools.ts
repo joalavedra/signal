@@ -1,7 +1,7 @@
 import { generateObject, tool } from "ai";
 import { z } from "zod";
 import { llm, MODELS } from "@/lib/ai/models";
-import { createClient } from "@/lib/supabase/server";
+import { getAdminClient } from "@/lib/supabase/admin";
 import { ExaService, type SearchCategory } from "@/lib/services/exa-service";
 import { WebExtractionService } from "@/lib/services/web-extraction-service";
 import {
@@ -185,7 +185,7 @@ export const searchCompanies = tool({
   }),
   execute: async (input) => {
     const exa = new ExaService();
-    const supabase = await createClient();
+    const supabase = getAdminClient();
 
     // Bias the query toward the campaign's ICP (industry + keywords) so ad-hoc
     // agent queries still return on-profile companies.
@@ -303,7 +303,7 @@ export const getCompanies = tool({
       .describe("Filter by company status"),
   }),
   execute: async (input) => {
-    const supabase = await createClient();
+    const supabase = getAdminClient();
 
     let query = supabase
       .from("campaign_organizations")
@@ -356,7 +356,7 @@ export const getCompanyDetail = tool({
       .describe("organizations.id (not campaign_organizations.id)."),
   }),
   execute: async ({ organizationId }) => {
-    const supabase = await createClient();
+    const supabase = getAdminClient();
 
     const { data, error } = await supabase
       .from("organizations")
@@ -381,7 +381,7 @@ export const getCampaignSummary = tool({
     campaignId: z.string().uuid().describe("Campaign ID"),
   }),
   execute: async (input) => {
-    const supabase = await createClient();
+    const supabase = getAdminClient();
 
     const [campaignResult, companiesResult, contactsResult] = await Promise.all(
       [
@@ -501,7 +501,7 @@ function competitorDomain(name: string): string | null {
  * for ad-hoc (no campaign) searches or when the campaign has no ICP set.
  */
 async function loadCampaignIcp(
-  supabase: Awaited<ReturnType<typeof createClient>>,
+  supabase: ReturnType<typeof getAdminClient>,
   campaignId?: string,
 ): Promise<ICP | null> {
   if (!campaignId) return null;
@@ -563,7 +563,7 @@ export const discoverCompanies = tool({
   execute: async (input) => {
     const exa = new ExaService();
     const extractor = new WebExtractionService();
-    const supabase = await createClient();
+    const supabase = getAdminClient();
 
     // Fetch existing domains linked to this campaign for dedup
     const existingDomains = new Set<string>();
@@ -840,7 +840,7 @@ export const searchYCCompanies = tool({
       .describe("Maximum number of companies to return"),
   }),
   execute: async (input) => {
-    const supabase = await createClient();
+    const supabase = getAdminClient();
 
     // ── Step 1: Check cache ──────────────────────────────────────────────
     let cacheQuery = supabase
