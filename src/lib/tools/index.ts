@@ -48,6 +48,7 @@ import {
   fetchGitHubStargazers,
   enrichGitHubProfiles,
   searchGitHubRepos,
+  discoverCompaniesFromGitHub,
 } from "./github-tools";
 import {
   createTracking,
@@ -135,6 +136,7 @@ const rawTools = {
   fetchGitHubStargazers,
   enrichGitHubProfiles,
   searchGitHubRepos,
+  discoverCompaniesFromGitHub,
   createTracking,
   bulkCreateTracking,
   getTrackingConfigs,
