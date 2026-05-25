@@ -13,7 +13,7 @@ import {
 } from "@/lib/prompt-safety";
 
 const MODEL_ID = MODELS.LIGHT;
-const MODEL_LABEL = "haiku";
+const MODEL_LABEL = "deepseek";
 
 interface SearchResultLike {
   title: string;

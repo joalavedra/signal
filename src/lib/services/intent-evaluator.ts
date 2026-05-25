@@ -80,7 +80,7 @@ Return a JSON object with:
     operation: "evaluate-intent",
     tokens_input: usage.inputTokens ?? 0,
     tokens_output: usage.outputTokens ?? 0,
-    estimated_cost_usd: estimateClaudeCostFromUsage("haiku", usage),
+    estimated_cost_usd: estimateClaudeCostFromUsage("deepseek", usage),
     metadata: {
       signalCategory: input.signalCategory,
       fire: object.fire,

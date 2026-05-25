@@ -116,7 +116,7 @@ export async function POST(request: Request) {
             operation: "chat",
             tokens_input: usage.inputTokens ?? 0,
             tokens_output: usage.outputTokens ?? 0,
-            estimated_cost_usd: estimateClaudeCostFromUsage("sonnet", usage),
+            estimated_cost_usd: estimateClaudeCostFromUsage("deepseek", usage),
             metadata: {
               model: "claude-sonnet-4-6",
               cache_creation_tokens: usage.inputTokenDetails?.cacheWriteTokens,
@@ -133,7 +133,10 @@ export async function POST(request: Request) {
               campaign_id: campaignId ?? null,
               tokens_input: usage.inputTokens ?? 0,
               tokens_output: usage.outputTokens ?? 0,
-              estimated_cost_usd: estimateClaudeCostFromUsage("sonnet", usage),
+              estimated_cost_usd: estimateClaudeCostFromUsage(
+                "deepseek",
+                usage,
+              ),
             },
           });
         },

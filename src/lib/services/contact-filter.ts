@@ -204,7 +204,7 @@ ${wrapUntrusted(combinedContent.slice(0, 12000))}`,
       operation: "domain-people-extract",
       tokens_input: usage.inputTokens ?? 0,
       tokens_output: usage.outputTokens ?? 0,
-      estimated_cost_usd: estimateClaudeCostFromUsage("haiku", usage),
+      estimated_cost_usd: estimateClaudeCostFromUsage("deepseek", usage),
       metadata: {
         model: "claude-haiku-4-5",
         domain,
@@ -332,7 +332,7 @@ Rules:
       operation: "contact-filter",
       tokens_input: usage.inputTokens ?? 0,
       tokens_output: usage.outputTokens ?? 0,
-      estimated_cost_usd: estimateClaudeCostFromUsage("haiku", usage),
+      estimated_cost_usd: estimateClaudeCostFromUsage("deepseek", usage),
       metadata: {
         model: "claude-haiku-4-5",
         companyName: company.name,
