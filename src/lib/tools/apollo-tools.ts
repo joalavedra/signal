@@ -1,6 +1,6 @@
 import { tool } from "ai";
 import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
+import { getAdminClient } from "@/lib/supabase/admin";
 import {
   searchPeople as apolloSearchPeopleApi,
   enrichPerson as apolloEnrichPersonApi,
@@ -188,7 +188,7 @@ export const apolloEnrichPerson = tool({
       .describe("Whether to spend extra credits to reveal phone number"),
   }),
   async execute({ personId, revealPersonalEmails, revealPhoneNumber }) {
-    const supabase = await createClient();
+    const supabase = getAdminClient();
     const { data: person, error } = await supabase
       .from("people")
       .select(
@@ -312,7 +312,7 @@ export const pushToApolloSequence = tool({
     emailAccountId,
     sendUnverified,
   }) {
-    const supabase = await createClient();
+    const supabase = getAdminClient();
 
     const { data: rows, error } = await supabase
       .from("campaign_people")

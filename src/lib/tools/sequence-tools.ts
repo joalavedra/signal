@@ -1,6 +1,7 @@
 import { tool } from "ai";
 import { z } from "zod";
-import { createClient, getSupabaseAndUser } from "@/lib/supabase/server";
+import { getSupabaseAndUser } from "@/lib/supabase/server";
+import { getAdminClient } from "@/lib/supabase/admin";
 import { composeEmail, mapConcurrent } from "@/lib/email-composition/compose";
 import { loadActiveEmailSkills } from "@/lib/email-composition/load-skills";
 import { saveDraft } from "@/lib/email-composition/save";
@@ -170,7 +171,7 @@ export const draftSequenceEmails = tool({
     sequenceId: z.string().uuid().describe("Sequence ID to draft emails for."),
   }),
   execute: async ({ sequenceId }) => {
-    const supabase = await createClient();
+    const supabase = getAdminClient();
 
     // Load sequence with steps and enrollments
     const { data: sequence } = await supabase
@@ -515,7 +516,7 @@ export const getSequenceStatus = tool({
     sequenceId: z.string().uuid().describe("Sequence ID."),
   }),
   execute: async ({ sequenceId }) => {
-    const supabase = await createClient();
+    const supabase = getAdminClient();
 
     const { data: sequence } = await supabase
       .from("sequences")

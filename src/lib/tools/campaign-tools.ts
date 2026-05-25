@@ -1,7 +1,7 @@
 import { tool } from "ai";
 import { z } from "zod";
 import { auth } from "@clerk/nextjs/server";
-import { createClient } from "@/lib/supabase/server";
+import { getAdminClient } from "@/lib/supabase/admin";
 
 export const saveCampaign = tool({
   description:
@@ -62,7 +62,7 @@ export const saveCampaign = tool({
       ),
   }),
   execute: async (input) => {
-    const supabase = await createClient();
+    const supabase = getAdminClient();
     const { userId } = await auth();
 
     if (input.id) {
@@ -120,7 +120,7 @@ export const getCampaign = tool({
       .describe("Campaign ID. Omit to get the most recent campaign."),
   }),
   execute: async (input) => {
-    const supabase = await createClient();
+    const supabase = getAdminClient();
 
     if (input.id) {
       const { data, error } = await supabase
@@ -149,7 +149,7 @@ export const listCampaigns = tool({
   description: "List all campaigns with summary stats.",
   inputSchema: z.object({}),
   execute: async () => {
-    const supabase = await createClient();
+    const supabase = getAdminClient();
 
     const { data: campaigns, error } = await supabase
       .from("campaigns")

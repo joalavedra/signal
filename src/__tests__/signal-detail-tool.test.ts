@@ -5,10 +5,8 @@ const mockEq = vi.fn(() => ({ single: mockSingle }));
 const mockSelect = vi.fn(() => ({ eq: mockEq }));
 const mockFrom = vi.fn((_table?: string) => ({ select: mockSelect }));
 
-vi.mock("@/lib/supabase/server", () => ({
-  createClient: vi
-    .fn()
-    .mockResolvedValue({ from: (table: string) => mockFrom(table) }),
+vi.mock("@/lib/supabase/admin", () => ({
+  getAdminClient: vi.fn(() => ({ from: (table: string) => mockFrom(table) })),
 }));
 
 import { getSignalDetail } from "@/lib/tools/signal-tools";

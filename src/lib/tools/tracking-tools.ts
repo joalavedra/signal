@@ -1,6 +1,6 @@
 import { tool } from "ai";
 import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
+import { getAdminClient } from "@/lib/supabase/admin";
 import { getQStashClient, getBaseUrl } from "@/lib/services/qstash";
 import { SCHEDULE_INTERVALS } from "@/lib/types/tracking";
 import type { Schedule } from "@/lib/types/tracking";
@@ -51,7 +51,7 @@ export const createTracking = tool({
       throw new Error("Either organizationId or personId is required");
     }
 
-    const supabase = await createClient();
+    const supabase = getAdminClient();
     const interval =
       SCHEDULE_INTERVALS[input.schedule as Schedule] ??
       SCHEDULE_INTERVALS.weekly;
@@ -121,7 +121,7 @@ export const bulkCreateTracking = tool({
       ),
   }),
   execute: async (input) => {
-    const supabase = await createClient();
+    const supabase = getAdminClient();
 
     // Get organizations in this campaign
     let query = supabase
@@ -228,7 +228,7 @@ export const getTrackingConfigs = tool({
       .describe("Filter by tracking status"),
   }),
   execute: async (input) => {
-    const supabase = await createClient();
+    const supabase = getAdminClient();
 
     let query = supabase
       .from("tracking_configs")
@@ -286,7 +286,7 @@ export const getTrackingHistory = tool({
       .describe("Max number of changes to return"),
   }),
   execute: async (input) => {
-    const supabase = await createClient();
+    const supabase = getAdminClient();
 
     const [changesResult, snapshotsResult] = await Promise.all([
       supabase
@@ -338,7 +338,7 @@ export const updateTracking = tool({
       .describe("New status"),
   }),
   execute: async (input) => {
-    const supabase = await createClient();
+    const supabase = getAdminClient();
 
     const updates: Record<string, unknown> = {};
     if (input.schedule) {

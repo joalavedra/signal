@@ -17,10 +17,8 @@ const mockOrder1 = vi.fn(() => ({ order: mockOrder2 }));
 const mockSelect = vi.fn(() => ({ order: mockOrder1 }));
 const mockFrom = vi.fn((_table?: string) => ({ select: mockSelect }));
 
-vi.mock("@/lib/supabase/server", () => ({
-  createClient: vi
-    .fn()
-    .mockResolvedValue({ from: (table: string) => mockFrom(table) }),
+vi.mock("@/lib/supabase/admin", () => ({
+  getAdminClient: vi.fn(() => ({ from: (table: string) => mockFrom(table) })),
 }));
 
 import { getSignals } from "@/lib/tools/signal-tools";
