@@ -2,8 +2,11 @@ import { tool } from "ai";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import {
+  findOrCreateOrganization,
+  linkOrganizationToCampaign,
   linkPersonToCampaign,
   mergeEnrichmentData,
+  normalizeDomain,
 } from "@/lib/services/knowledge-base";
 import { fetchWithTimeout } from "@/lib/fetch-with-timeout";
 
@@ -526,6 +529,329 @@ export const searchGitHubRepos = tool({
         language: r.language,
         url: r.html_url,
         owner: r.owner.login,
+      })),
+    };
+  },
+});
+
+// ---------------------------------------------------------------------------
+// Tool 4: Roll GitHub developer interest up into companies
+// ---------------------------------------------------------------------------
+
+// Domains that indicate a personal site, social profile, code host, or free
+// email provider rather than the company a developer works at. Never treated
+// as a company domain or used to derive a company.
+const NON_COMPANY_DOMAINS = new Set([
+  // Free email providers
+  "gmail.com",
+  "googlemail.com",
+  "outlook.com",
+  "hotmail.com",
+  "live.com",
+  "yahoo.com",
+  "icloud.com",
+  "me.com",
+  "proton.me",
+  "protonmail.com",
+  "pm.me",
+  "qq.com",
+  "163.com",
+  "hey.com",
+  "aol.com",
+  "gmx.com",
+  // Code hosts / personal-site hosts
+  "github.com",
+  "github.io",
+  "gitlab.com",
+  "bitbucket.org",
+  "vercel.app",
+  "netlify.app",
+  "pages.dev",
+  "web.app",
+  "firebaseapp.com",
+  "herokuapp.com",
+  "surge.sh",
+  // Blogging / link aggregators / social
+  "medium.com",
+  "substack.com",
+  "dev.to",
+  "hashnode.dev",
+  "notion.site",
+  "notion.so",
+  "gitbook.io",
+  "wordpress.com",
+  "blogspot.com",
+  "linktr.ee",
+  "bio.link",
+  "carrd.co",
+  "about.me",
+  "linkedin.com",
+  "twitter.com",
+  "x.com",
+  "t.me",
+  "youtube.com",
+]);
+
+function isPersonalEmail(email: string): boolean {
+  const at = email.lastIndexOf("@");
+  if (at < 0) return true;
+  return NON_COMPANY_DOMAINS.has(email.slice(at + 1).toLowerCase());
+}
+
+/** Clean a GitHub `company` field into a brandable name, or null if unusable. */
+function cleanCompanyName(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  // Take the first company when several are listed ("@a / @b", "A, B").
+  let s = raw.split(/\s*[/,|]\s*/)[0] ?? raw;
+  s = s.trim().replace(/^@+/, "").trim();
+  s = s.replace(/[,.]?\s*\b(inc|llc|ltd|gmbh|co|corp|corporation)\b\.?$/i, "");
+  s = s.trim();
+  return s.length >= 2 ? s : null;
+}
+
+/** Resolve a company domain from a profile blog URL, or null if non-company. */
+function companyDomainFromBlog(blog: string | null | undefined): string | null {
+  if (!blog || !blog.trim()) return null;
+  const url = /^https?:\/\//i.test(blog.trim())
+    ? blog.trim()
+    : `https://${blog.trim()}`;
+  let host: string;
+  try {
+    host = new URL(url).hostname.toLowerCase().replace(/^www\./, "");
+  } catch {
+    return null;
+  }
+  if (NON_COMPANY_DOMAINS.has(host)) return null;
+  const parts = host.split(".");
+  if (parts.length > 2 && NON_COMPANY_DOMAINS.has(parts.slice(-2).join("."))) {
+    return null;
+  }
+  return host;
+}
+
+function brandFromDomain(apex: string): string {
+  const sld = apex.split(".")[0] ?? "";
+  return sld ? sld.charAt(0).toUpperCase() + sld.slice(1) : "Unknown";
+}
+
+interface DevSignal {
+  username: string;
+  profile_url: string;
+  company: string | null;
+  blog: string | null;
+  email: string | null;
+  repo: string;
+}
+
+interface CompanyCluster {
+  name: string;
+  domain: string | null;
+  developers: Set<string>;
+  repos: Set<string>;
+  sample: Array<{ username: string; profile_url: string }>;
+}
+
+/** Cluster developer signals into companies, ranked by engaged-dev count. */
+function rollupCompanies(signals: DevSignal[]): CompanyCluster[] {
+  const clusters = new Map<string, CompanyCluster>();
+  for (const s of signals) {
+    const domain =
+      companyDomainFromBlog(s.blog) ??
+      (s.email && !isPersonalEmail(s.email)
+        ? s.email.slice(s.email.lastIndexOf("@") + 1).toLowerCase()
+        : null);
+    const name =
+      cleanCompanyName(s.company) ?? (domain ? brandFromDomain(domain) : null);
+    if (!name) continue;
+
+    const key = (domain ?? name).toLowerCase();
+    let c = clusters.get(key);
+    if (!c) {
+      c = {
+        name,
+        domain: domain ?? null,
+        developers: new Set(),
+        repos: new Set(),
+        sample: [],
+      };
+      clusters.set(key, c);
+    }
+    c.developers.add(s.username);
+    c.repos.add(s.repo);
+    if (!c.domain && domain) c.domain = domain;
+    if (c.sample.length < 5) {
+      c.sample.push({ username: s.username, profile_url: s.profile_url });
+    }
+  }
+  return [...clusters.values()].sort(
+    (a, b) => b.developers.size - a.developers.size,
+  );
+}
+
+/** Fetch the most recent N stargazer logins for a repo. */
+async function fetchRecentStargazerLogins(
+  owner: string,
+  repo: string,
+  count: number,
+): Promise<{ logins: string[]; error?: string }> {
+  const { data: repoData, status } = await githubFetch<{
+    stargazers_count: number;
+  }>(`/repos/${owner}/${repo}`);
+  if (!repoData) {
+    const reason =
+      status === 404
+        ? "not found"
+        : status === 403 || status === 429
+          ? "rate limited"
+          : `HTTP ${status}`;
+    return { logins: [], error: `${owner}/${repo}: ${reason}` };
+  }
+  const accessiblePages = Math.min(
+    Math.ceil(repoData.stargazers_count / PER_PAGE),
+    MAX_STARGAZER_PAGE,
+  );
+  const pagesNeeded = Math.ceil(count / PER_PAGE);
+  const logins: string[] = [];
+  for (
+    let page = accessiblePages;
+    page >= Math.max(1, accessiblePages - pagesNeeded + 1) &&
+    logins.length < count;
+    page--
+  ) {
+    const {
+      data,
+      status: s,
+      remaining,
+    } = await githubFetch<Array<{ user: { login: string } }>>(
+      `/repos/${owner}/${repo}/stargazers?per_page=${PER_PAGE}&page=${page}`,
+      "application/vnd.github.v3.star+json",
+    );
+    if (!data || data.length === 0) {
+      if (s === 422 && page > 1) continue;
+      break;
+    }
+    for (let i = data.length - 1; i >= 0 && logins.length < count; i--) {
+      logins.push(data[i].user.login);
+    }
+    if (remaining < 10) break;
+  }
+  return { logins };
+}
+
+export const discoverCompaniesFromGitHub = tool({
+  description:
+    "Discover COMPANIES (not just people) whose developers engage with given repositories -- the best way to find teams already adopting a category or a competitor's SDK (prime switch targets). Pass anchor repos as 'owner/repo' (e.g. competitor SDKs like 'privy-io/privy-js', 'thirdweb-dev/js', 'magiclabs/magic-js', or category libs like 'eth-infinitism/account-abstraction'). It fetches recent stargazers, reads their GitHub profiles (company / blog / email), and clusters them into companies ranked by how many of their developers engaged, then stores them as organizations linked to the campaign. GITHUB_TOKEN is strongly recommended -- without it GitHub rate-limits to ~60 requests/hour.",
+  inputSchema: z.object({
+    repos: z
+      .array(z.string())
+      .min(1)
+      .max(5)
+      .describe(
+        "Anchor repos as 'owner/repo', e.g. ['privy-io/privy-js','thirdweb-dev/js']. Use searchGitHubRepos first if you don't know the exact path.",
+      ),
+    campaignId: z
+      .string()
+      .uuid()
+      .optional()
+      .describe("Campaign to link discovered companies to"),
+    perRepo: z
+      .number()
+      .int()
+      .min(10)
+      .max(100)
+      .default(40)
+      .describe("Recent stargazers to sample per repo (10-100, default 40)"),
+    minDevelopers: z
+      .number()
+      .int()
+      .min(1)
+      .max(10)
+      .default(1)
+      .describe(
+        "Only surface companies with at least this many engaged developers (default 1)",
+      ),
+  }),
+  execute: async (input) => {
+    const repoErrors: string[] = [];
+    const signals: DevSignal[] = [];
+
+    for (const entry of input.repos) {
+      const [owner, repo] = entry.split("/").map((p) => p.trim());
+      if (!owner || !repo) {
+        repoErrors.push(`invalid repo '${entry}' (expected owner/repo)`);
+        continue;
+      }
+      const { logins, error } = await fetchRecentStargazerLogins(
+        owner,
+        repo,
+        input.perRepo,
+      );
+      if (error) {
+        repoErrors.push(error);
+        continue;
+      }
+      const repoLabel = `${owner}/${repo}`;
+      for (let i = 0; i < logins.length; i += 10) {
+        const batch = logins.slice(i, i + 10);
+        const profiles = await Promise.allSettled(
+          batch.map((u) => githubFetch<Record<string, unknown>>(`/users/${u}`)),
+        );
+        for (const p of profiles) {
+          if (p.status !== "fulfilled" || !p.value.data) continue;
+          const raw = p.value.data;
+          signals.push({
+            username: String(raw.login),
+            profile_url: String(raw.html_url),
+            company: raw.company != null ? String(raw.company) : null,
+            blog: raw.blog != null ? String(raw.blog) : null,
+            email: raw.email != null ? String(raw.email) : null,
+            repo: repoLabel,
+          });
+        }
+      }
+    }
+
+    const clusters = rollupCompanies(signals).filter(
+      (c) => c.developers.size >= input.minDevelopers,
+    );
+
+    let stored = 0;
+    for (const c of clusters) {
+      const domain = c.domain ? normalizeDomain(c.domain) : null;
+      const org = await findOrCreateOrganization({
+        name: c.name,
+        domain,
+        url: domain ? `https://${domain}` : null,
+        description: `${c.developers.size} developer(s) engaged with ${[
+          ...c.repos,
+        ].join(", ")} on GitHub`,
+        source: "github_signal",
+      });
+      await mergeEnrichmentData("organizations", org.id, {
+        github_signal: {
+          repos: [...c.repos],
+          developerCount: c.developers.size,
+          sampleDevelopers: c.sample,
+          detectedAt: new Date().toISOString(),
+        },
+      });
+      if (input.campaignId) {
+        await linkOrganizationToCampaign(org.id, input.campaignId);
+      }
+      stored++;
+    }
+
+    return {
+      profilesScanned: signals.length,
+      companiesFound: clusters.length,
+      companiesStored: stored,
+      repoErrors: repoErrors.length > 0 ? repoErrors : undefined,
+      companies: clusters.slice(0, 50).map((c) => ({
+        name: c.name,
+        domain: c.domain,
+        developerCount: c.developers.size,
+        repos: [...c.repos],
+        sampleDevelopers: c.sample,
       })),
     };
   },
