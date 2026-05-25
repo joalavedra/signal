@@ -1,7 +1,6 @@
-import { anthropic } from "@ai-sdk/anthropic";
 import { generateObject, tool } from "ai";
 import { z } from "zod";
-import { MODELS } from "@/lib/ai/models";
+import { llm, MODELS } from "@/lib/ai/models";
 import { createClient } from "@/lib/supabase/server";
 import { ExaService, type SearchCategory } from "@/lib/services/exa-service";
 import { WebExtractionService } from "@/lib/services/web-extraction-service";
@@ -662,7 +661,7 @@ export const discoverCompanies = tool({
       .join("\n\n");
 
     const { object: extracted, usage } = await generateObject({
-      model: anthropic(MODELS.LIGHT),
+      model: llm(MODELS.LIGHT),
       schema: z.object({
         companies: z.array(
           z.object({
@@ -708,7 +707,7 @@ ${wrapUntrusted(combinedContent.slice(0, 15000))}`,
       operation: "discoverCompanies-extract",
       tokens_input: usage.inputTokens ?? 0,
       tokens_output: usage.outputTokens ?? 0,
-      estimated_cost_usd: estimateClaudeCostFromUsage("haiku", usage),
+      estimated_cost_usd: estimateClaudeCostFromUsage("deepseek", usage),
       metadata: { model: "claude-haiku-4-5" },
     });
 

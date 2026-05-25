@@ -1,8 +1,7 @@
 import { createHash } from "node:crypto";
 import { generateObject } from "ai";
-import { anthropic } from "@ai-sdk/anthropic";
 import { z } from "zod";
-import { MODELS } from "@/lib/ai/models";
+import { llm, MODELS } from "@/lib/ai/models";
 import {
   estimateClaudeCostFromUsage,
   trackUsage,
@@ -128,7 +127,7 @@ export async function classifyNewRoles(
   if (jobs.length === 0) return [];
 
   const { object, usage } = await generateObject({
-    model: anthropic(MODELS.LIGHT),
+    model: llm(MODELS.LIGHT),
     schema: z.object({
       classifications: z.array(
         z.object({
@@ -162,7 +161,7 @@ Assign each title exactly one category from: engineering, sales, marketing, oper
     operation: "classify-roles",
     tokens_input: usage.inputTokens ?? 0,
     tokens_output: usage.outputTokens ?? 0,
-    estimated_cost_usd: estimateClaudeCostFromUsage("haiku", usage),
+    estimated_cost_usd: estimateClaudeCostFromUsage("deepseek", usage),
     metadata: { jobCount: jobs.length },
   });
 

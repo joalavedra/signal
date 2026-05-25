@@ -1,4 +1,3 @@
-import { anthropic } from "@ai-sdk/anthropic";
 import {
   convertToModelMessages,
   createUIMessageStream,
@@ -9,7 +8,7 @@ import {
   type ModelMessage,
 } from "ai";
 
-import { MODELS } from "@/lib/ai/models";
+import { llm, MODELS } from "@/lib/ai/models";
 import { getProfileForPrompt } from "@/lib/profile";
 import { getActiveSignals } from "@/lib/signals";
 import {
@@ -88,25 +87,6 @@ export async function POST(request: Request) {
   };
   const modelMessages = trimMessages(await convertToModelMessages(uiMessages));
 
-  // Mark the last message with ephemeral cache_control so everything before
-  // it (system prompt, tools, all prior turns) is cached. On the next turn,
-  // those tokens read back at ~10% of input cost. The AI SDK top-level
-  // providerOptions below caches the system+tools preamble; this extends the
-  // cache boundary over the growing message history.
-  if (modelMessages.length > 0) {
-    const lastIdx = modelMessages.length - 1;
-    modelMessages[lastIdx] = {
-      ...modelMessages[lastIdx],
-      providerOptions: {
-        ...modelMessages[lastIdx].providerOptions,
-        anthropic: {
-          ...(modelMessages[lastIdx].providerOptions?.anthropic ?? {}),
-          cacheControl: { type: "ephemeral" },
-        },
-      },
-    };
-  }
-
   const profile = await getProfileForPrompt(campaignId);
   const signals = campaignId ? await getActiveSignals(campaignId) : null;
   const systemPrompt = buildSystemPrompt({
@@ -119,19 +99,12 @@ export async function POST(request: Request) {
   const stream = createUIMessageStream({
     execute: ({ writer }) => {
       const result = streamText({
-        model: anthropic(MODELS.CHAT),
+        model: llm(MODELS.CHAT),
         system: systemPrompt,
         messages: modelMessages,
         tools: allTools,
         maxOutputTokens: 8192,
         stopWhen: stepCountIs(15),
-        // Cache the system prompt + tool definitions (~30k stable tokens) across
-        // turns in a conversation. Follow-up turns read them at ~10% of input cost.
-        providerOptions: {
-          anthropic: {
-            cacheControl: { type: "ephemeral" },
-          },
-        },
         experimental_context: {
           writer,
           userId: user.id,
@@ -143,7 +116,7 @@ export async function POST(request: Request) {
             operation: "chat",
             tokens_input: usage.inputTokens ?? 0,
             tokens_output: usage.outputTokens ?? 0,
-            estimated_cost_usd: estimateClaudeCostFromUsage("sonnet", usage),
+            estimated_cost_usd: estimateClaudeCostFromUsage("deepseek", usage),
             metadata: {
               model: "claude-sonnet-4-6",
               cache_creation_tokens: usage.inputTokenDetails?.cacheWriteTokens,
@@ -160,7 +133,10 @@ export async function POST(request: Request) {
               campaign_id: campaignId ?? null,
               tokens_input: usage.inputTokens ?? 0,
               tokens_output: usage.outputTokens ?? 0,
-              estimated_cost_usd: estimateClaudeCostFromUsage("sonnet", usage),
+              estimated_cost_usd: estimateClaudeCostFromUsage(
+                "deepseek",
+                usage,
+              ),
             },
           });
         },

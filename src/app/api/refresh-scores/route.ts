@@ -1,8 +1,7 @@
-import { anthropic } from "@ai-sdk/anthropic";
 import { generateObject } from "ai";
 import { z } from "zod";
 
-import { MODELS } from "@/lib/ai/models";
+import { llm, MODELS } from "@/lib/ai/models";
 import { getProfileForPrompt } from "@/lib/profile";
 import {
   estimateClaudeCostFromUsage,
@@ -137,7 +136,7 @@ export async function POST(request: Request) {
       : "No user profile available.";
 
     const result = await generateObject({
-      model: anthropic(MODELS.STRUCTURED),
+      model: llm(MODELS.STRUCTURED),
       schema: z.object({
         scores: z.array(
           z.object({
@@ -151,13 +150,6 @@ export async function POST(request: Request) {
           }),
         ),
       }),
-      // Cache the schema + tool bindings generated from `schema`. Cross-call
-      // cache hits only kick in when a rescore lands within ~5 min of the
-      // previous one, but when batches land together this saves 90% on the
-      // scoring-schema overhead.
-      providerOptions: {
-        anthropic: { cacheControl: { type: "ephemeral" } },
-      },
       prompt: `Score each contact's outreach priority from 1-10 based on these dimensions:
 
 - **Personal Connection** -- Shared industry/background with the user, mutual topics in posts, geographic proximity
@@ -189,7 +181,7 @@ ${wrapUntrusted(JSON.stringify(contactSummaries, null, 2))}`,
       operation: "score-contacts",
       tokens_input: result.usage.inputTokens ?? 0,
       tokens_output: result.usage.outputTokens ?? 0,
-      estimated_cost_usd: estimateClaudeCostFromUsage("sonnet", result.usage),
+      estimated_cost_usd: estimateClaudeCostFromUsage("deepseek", result.usage),
       metadata: {
         model: "claude-sonnet-4",
         contactsScored: result.object.scores.length,

@@ -19,6 +19,13 @@ export const PRICING = {
   claude_haiku_output: 5.0,
   claude_haiku_cache_read: 0.1,
   claude_haiku_cache_write: 1.25,
+  // DeepSeek-chat -> deepseek-v4-flash, non-thinking (per million tokens).
+  // Verified 2026-05-25: https://api-docs.deepseek.com/quick_start/pricing.
+  // DeepSeek has no separate cache-write surcharge -- cache misses (including
+  // the first write) bill at the standard input rate.
+  deepseek_input: 0.14,
+  deepseek_output: 0.28,
+  deepseek_cache_read: 0.0028,
   // Exa -- $7 per 1,000 searches (text + highlights for 10 results included)
   exa_search: 0.007,
   // Apify -- pay-per-result pricing (~20 posts per profile scrape)
@@ -88,7 +95,7 @@ interface UsageEntry {
   user_id?: string;
 }
 
-export type ClaudeModel = "sonnet" | "haiku";
+export type ClaudeModel = "sonnet" | "haiku" | "deepseek";
 
 export interface ClaudeCostParams {
   model: ClaudeModel;
@@ -106,24 +113,37 @@ export interface ClaudeCostParams {
  * `inputTokens` is the total (cache reads + cache writes + uncached); we subtract
  * the cache buckets to get the uncached remainder, then bill each at its own rate.
  */
+const MODEL_RATES: Record<
+  ClaudeModel,
+  { input: number; output: number; cacheRead: number; cacheWrite: number }
+> = {
+  sonnet: {
+    input: PRICING.claude_sonnet_input,
+    output: PRICING.claude_sonnet_output,
+    cacheRead: PRICING.claude_sonnet_cache_read,
+    cacheWrite: PRICING.claude_sonnet_cache_write,
+  },
+  haiku: {
+    input: PRICING.claude_haiku_input,
+    output: PRICING.claude_haiku_output,
+    cacheRead: PRICING.claude_haiku_cache_read,
+    cacheWrite: PRICING.claude_haiku_cache_write,
+  },
+  deepseek: {
+    input: PRICING.deepseek_input,
+    output: PRICING.deepseek_output,
+    cacheRead: PRICING.deepseek_cache_read,
+    // No separate write surcharge -- written/missed tokens bill at input rate.
+    cacheWrite: PRICING.deepseek_input,
+  },
+};
+
 export function estimateClaudeCost(params: ClaudeCostParams): number {
-  const { model } = params;
-  const uncachedRate =
-    model === "sonnet"
-      ? PRICING.claude_sonnet_input
-      : PRICING.claude_haiku_input;
-  const cacheReadRate =
-    model === "sonnet"
-      ? PRICING.claude_sonnet_cache_read
-      : PRICING.claude_haiku_cache_read;
-  const cacheWriteRate =
-    model === "sonnet"
-      ? PRICING.claude_sonnet_cache_write
-      : PRICING.claude_haiku_cache_write;
-  const outputRate =
-    model === "sonnet"
-      ? PRICING.claude_sonnet_output
-      : PRICING.claude_haiku_output;
+  const rates = MODEL_RATES[params.model];
+  const uncachedRate = rates.input;
+  const cacheReadRate = rates.cacheRead;
+  const cacheWriteRate = rates.cacheWrite;
+  const outputRate = rates.output;
 
   const cacheRead = params.cacheReadTokens ?? 0;
   const cacheWrite = params.cacheCreationTokens ?? 0;

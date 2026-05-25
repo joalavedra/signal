@@ -1,7 +1,6 @@
-import { anthropic } from "@ai-sdk/anthropic";
 import { generateText } from "ai";
 
-import { MODELS } from "@/lib/ai/models";
+import { llm, MODELS } from "@/lib/ai/models";
 import {
   estimateClaudeCostFromUsage,
   trackUsage,
@@ -61,7 +60,7 @@ export async function POST(request: Request) {
   }
 
   const { text: title, usage } = await generateText({
-    model: anthropic(MODELS.LIGHT),
+    model: llm(MODELS.LIGHT),
     system:
       "Summarize this conversation in 6-10 words as a short title. No quotes, no punctuation at the end. Be specific about the topic, not generic.",
     prompt: lines.join("\n"),
@@ -72,7 +71,7 @@ export async function POST(request: Request) {
     operation: "chat-summarize",
     tokens_input: usage.inputTokens ?? 0,
     tokens_output: usage.outputTokens ?? 0,
-    estimated_cost_usd: estimateClaudeCostFromUsage("haiku", usage),
+    estimated_cost_usd: estimateClaudeCostFromUsage("deepseek", usage),
     metadata: { model: "claude-haiku-4.5", chatId },
     user_id: user.id,
   });

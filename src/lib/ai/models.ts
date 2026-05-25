@@ -1,11 +1,19 @@
+import { createDeepSeek } from "@ai-sdk/deepseek";
+
+const deepseek = createDeepSeek({
+  apiKey: process.env.DEEPSEEK_API_KEY ?? "",
+});
+
 export const MODELS = {
-  AGENT: "claude-sonnet-4-6",
-  CHAT: "claude-sonnet-4-6",
+  AGENT: "deepseek-chat",
+  CHAT: "deepseek-chat",
 
-  EMAIL: "claude-opus-4-6",
+  EMAIL: "deepseek-chat",
 
-  BROWSER: "claude-sonnet-4-6",
-  STRUCTURED: "claude-sonnet-4-6",
+  BROWSER: "gemini-2.5-flash",
+  STRUCTURED: "deepseek-chat",
 
-  LIGHT: "claude-haiku-4-5-20251001",
+  LIGHT: "deepseek-chat",
 } as const;
+
+export const llm = deepseek;

@@ -1,6 +1,5 @@
-import { anthropic } from "@ai-sdk/anthropic";
 import { generateObject, jsonSchema } from "ai";
-import { MODELS } from "@/lib/ai/models";
+import { llm, MODELS } from "@/lib/ai/models";
 import { createClient } from "@/lib/supabase/server";
 import { withTimeout } from "@/lib/utils/timeout";
 import { structuralDiff } from "./diff";
@@ -93,12 +92,12 @@ async function executeStep(
       const url = resolveArgs({ url: step.url }, scope).url as string;
       const apiKey = process.env.BROWSERBASE_API_KEY;
       const projectId = process.env.BROWSERBASE_PROJECT_ID;
-      const anthropicKey = process.env.ANTHROPIC_API_KEY;
-      if (!apiKey || !projectId || !anthropicKey) {
+      const geminiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey || !projectId || !geminiKey) {
         const missing = [
           !apiKey && "BROWSERBASE_API_KEY",
           !projectId && "BROWSERBASE_PROJECT_ID",
-          !anthropicKey && "ANTHROPIC_API_KEY",
+          !geminiKey && "GEMINI_API_KEY",
         ]
           .filter(Boolean)
           .join(", ");
@@ -110,8 +109,8 @@ async function executeStep(
         apiKey,
         projectId,
         model: {
-          modelName: step.model ?? `anthropic/${MODELS.BROWSER}`,
-          apiKey: anthropicKey,
+          modelName: step.model ?? `google/${MODELS.BROWSER}`,
+          apiKey: geminiKey,
         },
         disablePino: true,
       });
@@ -179,7 +178,7 @@ async function executeStep(
         return null;
       }
       const { object } = await generateObject({
-        model: anthropic(step.model ?? MODELS.LIGHT),
+        model: llm(step.model ?? MODELS.LIGHT),
         schema: jsonSchema(step.schema),
         prompt: `${step.prompt}\n\n---\n\n${source.slice(0, 30_000)}`,
       });

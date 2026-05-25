@@ -1,7 +1,6 @@
-import { anthropic } from "@ai-sdk/anthropic";
 import { generateObject } from "ai";
 import { z } from "zod";
-import { MODELS } from "@/lib/ai/models";
+import { llm, MODELS } from "@/lib/ai/models";
 import {
   estimateClaudeCostFromUsage,
   trackUsage,
@@ -80,7 +79,7 @@ export async function classifyPeople(
     );
 
     const { object, usage } = await generateObject({
-      model: anthropic(MODELS.STRUCTURED),
+      model: llm(MODELS.STRUCTURED),
       schema: ResponseSchema,
       prompt: `You are categorising employees of ${stringify(companyName)} into departments and seniority levels for an org chart.
 
@@ -110,7 +109,7 @@ ${wrapUntrusted(lines.join("\n\n"))}`,
       operation: "department-classifier",
       tokens_input: usage.inputTokens ?? 0,
       tokens_output: usage.outputTokens ?? 0,
-      estimated_cost_usd: estimateClaudeCostFromUsage("sonnet", usage),
+      estimated_cost_usd: estimateClaudeCostFromUsage("deepseek", usage),
       metadata: {
         model: "claude-sonnet-4-6",
         companyName,

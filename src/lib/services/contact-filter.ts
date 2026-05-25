@@ -1,7 +1,6 @@
-import { anthropic } from "@ai-sdk/anthropic";
 import { generateObject } from "ai";
 import { z } from "zod";
-import { MODELS } from "@/lib/ai/models";
+import { llm, MODELS } from "@/lib/ai/models";
 import { WebExtractionService } from "@/lib/services/web-extraction-service";
 import {
   estimateClaudeCostFromUsage,
@@ -160,7 +159,7 @@ export async function findPeopleOnDomain(
 
   try {
     const { object, usage } = await generateObject({
-      model: anthropic(MODELS.LIGHT),
+      model: llm(MODELS.LIGHT),
       schema: z.object({
         people: z.array(
           z.object({
@@ -205,7 +204,7 @@ ${wrapUntrusted(combinedContent.slice(0, 12000))}`,
       operation: "domain-people-extract",
       tokens_input: usage.inputTokens ?? 0,
       tokens_output: usage.outputTokens ?? 0,
-      estimated_cost_usd: estimateClaudeCostFromUsage("haiku", usage),
+      estimated_cost_usd: estimateClaudeCostFromUsage("deepseek", usage),
       metadata: {
         model: "claude-haiku-4-5",
         domain,
@@ -290,7 +289,7 @@ export async function filterContactsByCompany(
 
   try {
     const { object, usage } = await generateObject({
-      model: anthropic(MODELS.LIGHT),
+      model: llm(MODELS.LIGHT),
       schema: z.object({
         verified: z.array(
           z.object({
@@ -333,7 +332,7 @@ Rules:
       operation: "contact-filter",
       tokens_input: usage.inputTokens ?? 0,
       tokens_output: usage.outputTokens ?? 0,
-      estimated_cost_usd: estimateClaudeCostFromUsage("haiku", usage),
+      estimated_cost_usd: estimateClaudeCostFromUsage("deepseek", usage),
       metadata: {
         model: "claude-haiku-4-5",
         companyName: company.name,

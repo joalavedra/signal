@@ -1,7 +1,6 @@
-import { anthropic } from "@ai-sdk/anthropic";
 import { generateObject } from "ai";
 import { z } from "zod";
-import { MODELS } from "@/lib/ai/models";
+import { llm, MODELS } from "@/lib/ai/models";
 import {
   estimateClaudeCostFromUsage,
   trackUsage,
@@ -52,7 +51,7 @@ export async function filterRelevantResults(
 
   try {
     const { object, usage } = await generateObject({
-      model: anthropic(MODELS.LIGHT),
+      model: llm(MODELS.LIGHT),
       schema: z.object({
         relevant: z
           .array(z.number().int())
@@ -77,7 +76,7 @@ ${wrapUntrusted(summaries.join("\n\n"))}`,
       operation: "relevance-filter",
       tokens_input: usage.inputTokens ?? 0,
       tokens_output: usage.outputTokens ?? 0,
-      estimated_cost_usd: estimateClaudeCostFromUsage("haiku", usage),
+      estimated_cost_usd: estimateClaudeCostFromUsage("deepseek", usage),
       metadata: {
         model: "claude-haiku-4-5",
         companyName,

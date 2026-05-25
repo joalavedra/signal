@@ -95,33 +95,33 @@ export const INTEGRATIONS: Integration[] = [
     fixHint: "Run `pnpm setup` or paste keys into .env.local",
   },
   {
-    id: "anthropic",
-    name: "Anthropic",
+    id: "deepseek",
+    name: "DeepSeek",
     category: "ai",
     severity: "required",
     feature: "Chat, enrichment, email drafts",
     consequence:
       "Every chat request will fail with a 500. The agent and email composer are non-functional.",
-    envVars: ["ANTHROPIC_API_KEY"],
-    signupUrl: "https://console.anthropic.com",
-    keysUrl: "https://console.anthropic.com/settings/keys",
-    fixHint: "Add `ANTHROPIC_API_KEY=sk-ant-api...` to .env.local",
+    envVars: ["DEEPSEEK_API_KEY"],
+    signupUrl: "https://platform.deepseek.com",
+    keysUrl: "https://platform.deepseek.com/api_keys",
+    fixHint: "Add `DEEPSEEK_API_KEY=sk-...` to .env.local",
+  },
+  {
+    id: "gemini",
+    name: "Google Gemini",
+    category: "ai",
+    severity: "required",
+    feature: "Stagehand vision (browser DOM reasoning)",
+    consequence:
+      "Stagehand-based signals (hiring scraper, browser_script steps) will fail.",
+    envVars: ["GEMINI_API_KEY"],
+    signupUrl: "https://aistudio.google.com",
+    keysUrl: "https://aistudio.google.com/apikey",
+    fixHint: "Add `GEMINI_API_KEY=...` to .env.local",
   },
 
   // ─── OPTIONAL ────────────────────────────────────────────────────────────
-  {
-    id: "anthropic_admin",
-    name: "Anthropic Admin",
-    category: "ai",
-    severity: "optional",
-    feature: "Cost tracking dashboard",
-    consequence:
-      "Cost reports fall back to local estimates instead of billed totals.",
-    envVars: ["ANTHROPIC_ADMIN_KEY"],
-    signupUrl: "https://console.anthropic.com",
-    keysUrl: "https://console.anthropic.com/settings/admin-keys",
-    fixHint: "Add `ANTHROPIC_ADMIN_KEY=sk-ant-admin...` to .env.local",
-  },
   {
     id: "browserbase",
     name: "Browserbase",
