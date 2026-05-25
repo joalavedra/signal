@@ -19,6 +19,7 @@ import {
   stringify,
   wrapUntrusted,
 } from "@/lib/prompt-safety";
+import type { ICP } from "@/lib/types/campaign";
 
 // ── Directory / aggregator blocklist ──────────────────────────────────────
 // Domains that list OTHER businesses. Results from these should never be
@@ -63,12 +64,20 @@ const DIRECTORY_DOMAINS = new Set([
   "goodfirms.co",
   "g2.com",
   "capterra.com",
+  // Accelerators / investor portfolios / ecosystem trackers (scraped as
+  // sources, never stored as companies themselves)
+  "ycombinator.com",
+  "producthunt.com",
+  "a16zcrypto.com",
+  "paradigm.xyz",
+  "defillama.com",
   // General directories / aggregators
   "facebook.com",
   "instagram.com",
   "twitter.com",
   "x.com",
   "linkedin.com",
+  "github.com",
   "tiktok.com",
   "youtube.com",
   "pinterest.com",
@@ -178,7 +187,15 @@ export const searchCompanies = tool({
     const exa = new ExaService();
     const supabase = await createClient();
 
-    const searchResponse = await exa.search(input.query, {
+    // Bias the query toward the campaign's ICP (industry + keywords) so ad-hoc
+    // agent queries still return on-profile companies.
+    const icp = await loadCampaignIcp(supabase, input.campaignId);
+    const extraTerms = icpQueryTerms(icp, input.query);
+    const effectiveQuery = extraTerms.length
+      ? `${input.query} ${extraTerms.join(" ")}`
+      : input.query;
+
+    const searchResponse = await exa.search(effectiveQuery, {
       numResults: input.numResults,
       category: input.category as SearchCategory | undefined,
       includeText: input.includeText,
@@ -270,7 +287,7 @@ export const searchCompanies = tool({
       newCompanies: results.length,
       duplicatesSkipped,
       directoriesFiltered,
-      query: input.query,
+      query: effectiveQuery,
     };
   },
 });
@@ -421,116 +438,98 @@ export const getCampaignSummary = tool({
   },
 });
 
-// ── Industry directory knowledge base ─────────────────────────────────────
-// Maps business categories to well-known directory domains that list them.
-// The tool uses these to build targeted site: queries and direct scrape URLs,
-// producing much higher-quality results than generic "directory list" queries.
-const INDUSTRY_DIRECTORIES: Record<string, string[]> = {
-  // Property / Real estate
-  "estate agent": [
-    "rightmove.co.uk",
-    "zoopla.co.uk",
-    "onthemarket.com",
-    "yell.com",
-  ],
-  "estate agency": [
-    "rightmove.co.uk",
-    "zoopla.co.uk",
-    "onthemarket.com",
-    "yell.com",
-  ],
-  "letting agent": [
-    "rightmove.co.uk",
-    "zoopla.co.uk",
-    "openrent.com",
-    "yell.com",
-  ],
-  "property management": ["rightmove.co.uk", "zoopla.co.uk", "yell.com"],
-  // Healthcare
-  "dental practice": [
-    "nhs.uk",
-    "dentalguide.co.uk",
-    "mydentist.co.uk",
-    "yell.com",
-  ],
-  dentist: ["nhs.uk", "dentalguide.co.uk", "bda.org", "yell.com"],
-  doctor: ["nhs.uk", "iwantgreatcare.org", "yell.com"],
-  "gp surgery": ["nhs.uk", "yell.com"],
-  physiotherapist: ["csp.org.uk", "physio-pedia.com", "yell.com"],
-  chiropractor: ["gcc-uk.org", "yell.com"],
-  optician: ["yell.com", "specsavers.co.uk"],
-  veterinary: ["rcvs.org.uk", "yell.com", "vets-now.com"],
-  // Legal
-  solicitor: ["lawsociety.org.uk", "solicitors.guru", "yell.com"],
-  lawyer: ["lawsociety.org.uk", "solicitors.guru", "yell.com"],
-  "law firm": ["lawsociety.org.uk", "chambers.com", "legal500.com", "yell.com"],
-  // Finance
-  accountant: ["icaew.com", "acca.com", "yell.com"],
-  "financial adviser": ["unbiased.co.uk", "vouchedfor.co.uk", "yell.com"],
-  "mortgage broker": ["unbiased.co.uk", "yell.com"],
-  // Trades / Home services
-  plumber: ["checkatrade.com", "trustatrader.com", "mybuilder.com", "yell.com"],
-  electrician: [
-    "checkatrade.com",
-    "trustatrader.com",
-    "mybuilder.com",
-    "yell.com",
-  ],
-  builder: ["checkatrade.com", "trustatrader.com", "mybuilder.com", "yell.com"],
-  roofer: ["checkatrade.com", "trustatrader.com", "yell.com"],
-  locksmith: ["checkatrade.com", "yell.com"],
-  // Food / Hospitality
-  restaurant: [
-    "tripadvisor.co.uk",
-    "thefork.co.uk",
-    "opentable.co.uk",
-    "google.com/maps",
-  ],
-  cafe: ["tripadvisor.co.uk", "yell.com"],
-  hotel: ["tripadvisor.co.uk", "booking.com", "hotels.com"],
-  "wedding venue": ["hitched.co.uk", "bridebook.com", "yell.com"],
-  // Automotive
-  "car dealer": ["autotrader.co.uk", "motors.co.uk", "yell.com"],
-  garage: ["goodgaragescheme.com", "checkatrade.com", "yell.com"],
-  "mot centre": ["goodgaragescheme.com", "yell.com"],
-  // Education / Childcare
-  nursery: ["daynurseries.co.uk", "ofsted.gov.uk", "yell.com"],
-  "driving school": ["approveddriving.co.uk", "yell.com"],
-  tutor: ["thetutorwebsite.co.uk", "firsttutors.com", "yell.com"],
-  // Beauty / Wellness
-  "beauty salon": ["treatwell.co.uk", "fresha.com", "yell.com"],
-  "hair salon": ["treatwell.co.uk", "fresha.com", "yell.com"],
-  gym: ["hussle.com", "puregym.com", "yell.com"],
-  spa: ["treatwell.co.uk", "spabreaks.com", "yell.com"],
-  // Recruitment
-  "recruitment agency": ["rec.uk.com", "yell.com", "reed.co.uk"],
-  // Marketing / Creative
-  "marketing agency": ["clutch.co", "themanifest.com", "sortlist.co.uk"],
-  "web design": ["clutch.co", "themanifest.com", "sortlist.co.uk"],
-  "seo agency": ["clutch.co", "themanifest.com"],
-  // IT
-  "it support": ["clutch.co", "techradar.com", "yell.com"],
-  "managed service provider": ["clutch.co", "channele2e.com"],
+// ── Ecosystem source knowledge base ───────────────────────────────────────
+// Maps developer / crypto / fintech categories to authoritative "list" pages
+// (accelerator directories, investor portfolios, ecosystem trackers) that
+// enumerate companies. The tool builds targeted site: queries against these,
+// producing higher-signal results than a bare "list of companies" search.
+const DISCOVERY_SOURCES: Record<string, string[]> = {
+  // Early-stage tech, broad
+  startup: ["ycombinator.com", "producthunt.com"],
+  saas: ["ycombinator.com", "producthunt.com"],
+  "developer tools": ["ycombinator.com", "producthunt.com"],
+  // Fintech & payments
+  fintech: ["ycombinator.com", "producthunt.com"],
+  payments: ["ycombinator.com", "producthunt.com"],
+  // Crypto / web3 — investor portfolios + ecosystem trackers
+  crypto: ["a16zcrypto.com", "paradigm.xyz", "ycombinator.com"],
+  web3: ["a16zcrypto.com", "paradigm.xyz", "ycombinator.com"],
+  blockchain: ["a16zcrypto.com", "paradigm.xyz"],
+  defi: ["defillama.com", "a16zcrypto.com"],
+  stablecoin: ["a16zcrypto.com", "ycombinator.com"],
+  wallet: ["a16zcrypto.com", "ycombinator.com"],
+};
+
+// Known apex domains for wallet / auth / account-abstraction platforms whose
+// public customer & case-study pages list companies that already buy this
+// category -- prime "switch" targets. Used to build competitor-customer queries.
+const COMPETITOR_DOMAINS: Record<string, string> = {
+  thirdweb: "thirdweb.com",
+  privy: "privy.io",
+  dynamic: "dynamic.xyz",
+  magic: "magic.link",
+  web3auth: "web3auth.io",
+  biconomy: "biconomy.io",
+  alchemy: "alchemy.com",
 };
 
 /**
- * Look up directory domains for an industry string. Tries exact match first,
- * then falls back to partial keyword matching.
+ * Look up ecosystem source domains for an industry/keyword string. Tries exact
+ * match first, then partial keyword matching in either direction.
  */
-function findDirectoriesForIndustry(industry: string): string[] {
+function findSourcesForIndustry(industry: string): string[] {
   const lower = industry.toLowerCase();
-  // Exact match
-  if (INDUSTRY_DIRECTORIES[lower]) return INDUSTRY_DIRECTORIES[lower];
-  // Partial: check if any key is contained in the input or vice-versa
-  for (const [key, dirs] of Object.entries(INDUSTRY_DIRECTORIES)) {
-    if (lower.includes(key) || key.includes(lower)) return dirs;
+  if (DISCOVERY_SOURCES[lower]) return DISCOVERY_SOURCES[lower];
+  for (const [key, sources] of Object.entries(DISCOVERY_SOURCES)) {
+    if (lower.includes(key) || key.includes(lower)) return sources;
   }
   return [];
 }
 
+/** Resolve a free-text competitor name to its apex domain, if known. */
+function competitorDomain(name: string): string | null {
+  const lower = name.toLowerCase().trim();
+  if (COMPETITOR_DOMAINS[lower]) return COMPETITOR_DOMAINS[lower];
+  for (const [key, domain] of Object.entries(COMPETITOR_DOMAINS)) {
+    if (lower.includes(key)) return domain;
+  }
+  return null;
+}
+
+/**
+ * Load a campaign's ICP so discovery can bias queries toward fit. Returns null
+ * for ad-hoc (no campaign) searches or when the campaign has no ICP set.
+ */
+async function loadCampaignIcp(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  campaignId?: string,
+): Promise<ICP | null> {
+  if (!campaignId) return null;
+  const { data } = await supabase
+    .from("campaigns")
+    .select("icp")
+    .eq("id", campaignId)
+    .maybeSingle();
+  const icp = data?.icp as ICP | null | undefined;
+  return icp && Object.keys(icp).length > 0 ? icp : null;
+}
+
+/**
+ * Compact ICP terms (industry + keywords) for blending into a search query.
+ * Skips any term already present in the base query so we don't duplicate.
+ */
+function icpQueryTerms(icp: ICP | null, baseQuery: string): string[] {
+  if (!icp) return [];
+  const base = baseQuery.toLowerCase();
+  const candidates = [icp.industry, ...(icp.keywords ?? [])].filter(
+    (t): t is string => Boolean(t),
+  );
+  return candidates.filter((t) => !base.includes(t.toLowerCase()));
+}
+
 export const discoverCompanies = tool({
   description:
-    "Smart company discovery that searches for directories and lists of businesses first, then scrapes those pages to extract individual companies. Knows about industry-specific directories (Rightmove for estate agents, Checkatrade for tradespeople, Law Society for solicitors, etc.) and targets them directly. Much more effective than direct search for local/regional businesses. Use this as the PRIMARY tool when the user asks to find companies in a specific area or industry. Works with or without a campaign.",
+    "Discover companies by finding authoritative 'list' pages (YC and Product Hunt directories, investor portfolios like a16z crypto / Paradigm, ecosystem trackers like DefiLlama, 'awesome-*' GitHub lists) and scraping them to extract individual companies. Best for B2B / tech / crypto / fintech segments. To find companies that already use a competing product (prime switch targets), pass `competitors` (e.g. ['Privy','thirdweb']) and it will mine their public customer / case-study pages. Pass `location` only when geography genuinely matters (most software/crypto ICPs are global). Use `searchCompanies` for open-ended semantic search and `searchYCCompanies` for batch/region filters. Works with or without a campaign; when a campaignId is set, queries are biased toward the campaign ICP.",
   inputSchema: z.object({
     campaignId: z
       .string()
@@ -540,17 +539,26 @@ export const discoverCompanies = tool({
     industry: z
       .string()
       .describe(
-        "Industry or business type, e.g. 'estate agents', 'dental practices', 'plumbers'",
+        "Segment or category, e.g. 'crypto payments', 'consumer crypto apps', 'stablecoin fintech', 'web3 wallets'",
       ),
     location: z
       .string()
+      .optional()
       .describe(
-        "Geographic area, e.g. 'West Midlands', 'Birmingham', 'Manchester'",
+        "Optional geographic area. Omit for global software/crypto searches; only set it when the ICP is region-specific.",
+      ),
+    competitors: z
+      .array(z.string())
+      .optional()
+      .describe(
+        "Competing products whose customers are switch targets, e.g. ['Privy','thirdweb','Dynamic','Magic']. Mines their public customer / case-study pages.",
       ),
     additionalContext: z
       .string()
       .optional()
-      .describe("Extra context for search, e.g. 'independent agencies only'"),
+      .describe(
+        "Extra qualifier for extraction, e.g. 'Series A+ only', 'EVM chains'",
+      ),
   }),
   execute: async (input) => {
     const exa = new ExaService();
@@ -572,25 +580,40 @@ export const discoverCompanies = tool({
       }
     }
 
-    // Step 1: Build smart directory queries
-    const knownDirs = findDirectoriesForIndustry(input.industry);
+    // Step 1: Build smart discovery queries, biased toward the campaign ICP.
+    const icp = await loadCampaignIcp(supabase, input.campaignId);
+    const icpKeywords = [icp?.industry, ...(icp?.keywords ?? [])].filter(
+      (t): t is string => Boolean(t),
+    );
+    // ICP terms not already implied by the industry argument.
+    const icpExtra = icpKeywords
+      .filter((t) => !input.industry.toLowerCase().includes(t.toLowerCase()))
+      .slice(0, 4)
+      .join(" ");
+
+    const geo = input.location ? ` ${input.location}` : "";
+    const base = `${input.industry}${icpExtra ? ` ${icpExtra}` : ""}`;
 
     const directoryQueries: string[] = [];
 
-    // Targeted site: queries for known directories (highest signal)
-    for (const dir of knownDirs.slice(0, 3)) {
-      directoryQueries.push(`${input.industry} ${input.location} site:${dir}`);
+    // Targeted site: queries against known ecosystem sources (highest signal).
+    const knownSources = findSourcesForIndustry(input.industry);
+    for (const src of knownSources.slice(0, 3)) {
+      directoryQueries.push(`${base}${geo} site:${src}`);
     }
 
-    // Generic fallback queries
+    // Competitor-customer mining: companies already buying this category.
+    for (const c of (input.competitors ?? []).slice(0, 3)) {
+      const dom = competitorDomain(c);
+      if (dom) directoryQueries.push(`${c} customers case studies site:${dom}`);
+      directoryQueries.push(`companies using ${c}${geo}`);
+    }
+
+    // Generic semantic fallbacks that work for tech/crypto segments.
     directoryQueries.push(
-      `${input.industry} in ${input.location} directory list`,
-      `best ${input.industry} ${input.location}`,
+      `list of ${base} companies${geo}`,
+      `${base} startups${geo}`,
     );
-
-    if (directoryQueries.length < 5) {
-      directoryQueries.push(`${input.industry} near ${input.location} reviews`);
-    }
 
     const directoryResults = await Promise.allSettled(
       directoryQueries.map((q) =>
@@ -686,19 +709,19 @@ export const discoverCompanies = tool({
           }),
         ),
       }),
-      prompt: `Extract individual ${stringify(input.industry)} businesses from the following directory/list pages. Only extract businesses that are actually located in or near ${stringify(input.location)}.${input.additionalContext ? ` Additional filter: ${stringify(input.additionalContext)}` : ""}
+      prompt: `Extract individual ${stringify(input.industry)} companies from the following list / directory / portfolio / customer pages.${input.location ? ` Only include companies based in or near ${stringify(input.location)}.` : ""}${input.additionalContext ? ` Additional filter: ${stringify(input.additionalContext)}` : ""}
 
 ${UNTRUSTED_NOTICE}
 
 Rules:
-- Only extract ACTUAL individual businesses, not directory sites or aggregator platforms
-- Each business should be a distinct entity (not a duplicate with a slightly different name)
-- Clean up names: remove "| Dentist in ..." suffixes, remove "Ltd" unless it's part of the brand
-- Extract the business's own website domain, NOT the directory URL
-- If a business appears multiple times across sources, only include it once
-- Skip any business that doesn't match the target industry or location
+- Only extract ACTUAL individual companies, not directory sites, investor funds, or aggregator platforms
+- Each company should be a distinct entity (not a duplicate with a slightly different name)
+- Clean up names: remove taglines and suffixes, remove "Inc"/"Ltd" unless part of the brand
+- Extract the company's own website domain, NOT the source/list URL
+- If a company appears multiple times across sources, only include it once
+- Skip anything that doesn't match the target segment${input.location ? " or location" : ""}
 
-Scraped directory content:
+Scraped source content:
 ${wrapUntrusted(combinedContent.slice(0, 15000))}`,
     });
 
