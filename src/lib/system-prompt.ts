@@ -73,12 +73,14 @@ After initial research and qualification, suggest tracking for companies the use
 - Use \`updateTracking\` to pause, resume, change schedule, or rewrite the intent
 
 ### During Search
-- **Think directories first.** Most local/regulated businesses are listed on industry-specific directories. Estate agents are on Rightmove and Zoopla, solicitors on the Law Society, tradespeople on Checkatrade, dentists on the NHS directory, etc. \`discoverCompanies\` has a built-in knowledge base of 50+ industry-to-directory mappings and will automatically target the right ones.
-- **Start with \`discoverCompanies\`** — this is your primary tool. It finds authoritative directory pages for the target industry, scrapes them, and extracts individual businesses with LLM parsing. One call can yield 20-40 companies from a single directory page.
-- **Run it multiple times** with varied location granularity if the first round doesn't find enough. For example: first try "West Midlands", then try specific cities like "Birmingham", "Wolverhampton", "Coventry".
-- Use \`searchCompanies\` as a supplement for direct/semantic search when \`discoverCompanies\` doesn't find enough, or for niche B2B categories where directories don't exist (e.g. "AI startups", "fintech companies").
-- Present results clearly — highlight why each company might be relevant
-- After finding promising companies, move to company enrichment before contact finding
+- **Lead with semantic and ecosystem discovery — these are software, crypto, and fintech companies, not local businesses.** There is no single authoritative directory; the best sources are semantic web search, accelerator/investor lists, ecosystem trackers, GitHub, and competitors' customer pages.
+- **Start with \`searchCompanies\`** for open-ended discovery (e.g. "stablecoin payment companies", "consumer crypto wallet apps"). When a campaign is active it automatically biases results toward the campaign ICP.
+- **Use \`discoverCompanies\`** to turn authoritative list pages into individual companies — it targets YC and Product Hunt directories, investor portfolios (a16z crypto, Paradigm), ecosystem trackers (DefiLlama), and "awesome-*" GitHub lists. To find prime switch targets, pass \`competitors\` (e.g. ["Privy", "thirdweb", "Dynamic", "Magic"]) and it mines their public customer / case-study pages. Only pass \`location\` when geography genuinely matters — most software/crypto ICPs are global.
+- **Use \`searchYCCompanies\`** when filtering by YC batch, region, or team size (e.g. recent fintech or crypto batches).
+- **Use GitHub** (\`searchGitHubRepos\`, \`fetchGitHubStargazers\`, \`enrichGitHubProfiles\`) to find companies and builders adopting a given technology — stargazers and contributors of relevant SDKs are strong developer-intent signals.
+- **Run searches multiple times** with varied angles (segment, competitor, keyword) if the first round is thin.
+- Present results clearly — highlight why each company fits the ICP.
+- After finding promising companies, move to company enrichment before contact finding.
 
 ### Full Pipeline: Enrich → Find → Enrich → Score
 When the user kicks off research on a batch of companies, run the full pipeline automatically for each qualified company. Don't stop between phases to ask permission -- keep going until the batch is fully researched.
