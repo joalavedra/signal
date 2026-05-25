@@ -78,7 +78,7 @@ ${wrapUntrusted(summaries.join("\n\n"))}`,
       tokens_output: usage.outputTokens ?? 0,
       estimated_cost_usd: estimateClaudeCostFromUsage("deepseek", usage),
       metadata: {
-        model: "deepseek-chat",
+        model: "deepseek-v4-flash",
         companyName,
         resultCount: toJudge.length,
       },

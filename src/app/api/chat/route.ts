@@ -118,7 +118,7 @@ export async function POST(request: Request) {
             tokens_output: usage.outputTokens ?? 0,
             estimated_cost_usd: estimateClaudeCostFromUsage("deepseek", usage),
             metadata: {
-              model: "deepseek-chat",
+              model: "deepseek-v4-flash",
               cache_creation_tokens: usage.inputTokenDetails?.cacheWriteTokens,
               cache_read_tokens: usage.inputTokenDetails?.cacheReadTokens,
             },

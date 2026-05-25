@@ -5,15 +5,15 @@ const deepseek = createDeepSeek({
 });
 
 export const MODELS = {
-  AGENT: "deepseek-chat",
-  CHAT: "deepseek-chat",
+  AGENT: "deepseek-v4-flash",
+  CHAT: "deepseek-v4-flash",
 
-  EMAIL: "deepseek-chat",
+  EMAIL: "deepseek-v4-flash",
 
   BROWSER: "gemini-2.5-flash",
-  STRUCTURED: "deepseek-chat",
+  STRUCTURED: "deepseek-v4-flash",
 
-  LIGHT: "deepseek-chat",
+  LIGHT: "deepseek-v4-flash",
 } as const;
 
 export const llm = deepseek;

@@ -206,7 +206,7 @@ ${wrapUntrusted(combinedContent.slice(0, 12000))}`,
       tokens_output: usage.outputTokens ?? 0,
       estimated_cost_usd: estimateClaudeCostFromUsage("deepseek", usage),
       metadata: {
-        model: "deepseek-chat",
+        model: "deepseek-v4-flash",
         domain,
         pagesScraped: scrapedContent.length,
         peopleFound: object.people.length,
@@ -334,7 +334,7 @@ Rules:
       tokens_output: usage.outputTokens ?? 0,
       estimated_cost_usd: estimateClaudeCostFromUsage("deepseek", usage),
       metadata: {
-        model: "deepseek-chat",
+        model: "deepseek-v4-flash",
         companyName: company.name,
         candidateCount: preFiltered.length,
         verifiedCount: object.verified.length,

@@ -19,7 +19,7 @@ export const PRICING = {
   claude_haiku_output: 5.0,
   claude_haiku_cache_read: 0.1,
   claude_haiku_cache_write: 1.25,
-  // DeepSeek-chat -> deepseek-v4-flash, non-thinking (per million tokens).
+  // DeepSeek V4 Flash, non-thinking (per million tokens).
   // Verified 2026-05-25: https://api-docs.deepseek.com/quick_start/pricing.
   // DeepSeek has no separate cache-write surcharge -- cache misses (including
   // the first write) bill at the standard input rate.
