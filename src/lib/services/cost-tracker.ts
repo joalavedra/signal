@@ -75,7 +75,7 @@ export function withAction<T>(label: string, fn: () => Promise<T>): Promise<T> {
 }
 
 export type ServiceName =
-  | "claude"
+  | "deepseek"
   | "exa"
   | "apify"
   | "browserbase"

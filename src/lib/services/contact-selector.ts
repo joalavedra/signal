@@ -119,7 +119,7 @@ Pick up to ${maxPicks} contact(s). Rules:
   }
 
   trackUsage({
-    service: "claude",
+    service: "deepseek",
     operation: "select-contacts",
     tokens_input: usage.inputTokens ?? 0,
     tokens_output: usage.outputTokens ?? 0,

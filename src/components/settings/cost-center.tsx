@@ -87,12 +87,15 @@ const REAL_SPEND_FALLBACK_HINT: Record<keyof RealSpend, string> = {
 };
 
 const SERVICE_LABELS: Record<string, string> = {
+  deepseek: "DeepSeek",
   claude: "Claude AI",
   exa: "Exa Search",
   apify: "Apify",
   browserbase: "Browserbase",
   google: "Google Places",
   agentmail: "AgentMail",
+  apollo: "Apollo",
+  attio: "Attio",
 };
 
 const OP_LABELS: Record<string, string> = {

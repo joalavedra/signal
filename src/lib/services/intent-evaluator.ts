@@ -76,7 +76,7 @@ Return a JSON object with:
   });
 
   trackUsage({
-    service: "claude",
+    service: "deepseek",
     operation: "evaluate-intent",
     tokens_input: usage.inputTokens ?? 0,
     tokens_output: usage.outputTokens ?? 0,
