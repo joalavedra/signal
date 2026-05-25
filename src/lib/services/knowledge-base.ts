@@ -1,5 +1,5 @@
 import { getDomain } from "tldts";
-import { createClient } from "@/lib/supabase/server";
+import { getAdminClient } from "@/lib/supabase/admin";
 import type { Organization, Person } from "@/lib/types/campaign";
 
 /**
@@ -55,7 +55,7 @@ export async function findOrCreateOrganization(data: {
   description?: string | null;
   source?: string | null;
 }): Promise<Organization> {
-  const supabase = await createClient();
+  const supabase = getAdminClient();
   const normalizedDomain = data.domain ? normalizeDomain(data.domain) : null;
 
   // Try dedup by domain first
@@ -143,7 +143,7 @@ export async function findOrCreatePerson(data: {
   organization_id?: string | null;
   source?: string | null;
 }): Promise<Person> {
-  const supabase = await createClient();
+  const supabase = getAdminClient();
   const normalizedLinkedin = data.linkedin_url
     ? normalizeLinkedInUrl(data.linkedin_url)
     : null;
@@ -250,7 +250,7 @@ export async function linkOrganizationToCampaign(
   organizationId: string,
   campaignId: string,
 ): Promise<{ id: string }> {
-  const supabase = await createClient();
+  const supabase = getAdminClient();
 
   const { data, error } = await supabase
     .from("campaign_organizations")
@@ -275,7 +275,7 @@ export async function linkPersonToCampaign(
   personId: string,
   campaignId: string,
 ): Promise<{ id: string }> {
-  const supabase = await createClient();
+  const supabase = getAdminClient();
 
   const { data, error } = await supabase
     .from("campaign_people")
@@ -301,7 +301,7 @@ export async function mergeEnrichmentData(
   newData: Record<string, unknown>,
   status: "enriched" | "failed" = "enriched",
 ): Promise<void> {
-  const supabase = await createClient();
+  const supabase = getAdminClient();
 
   // Fetch existing enrichment_data
   const { data: existing } = await supabase
@@ -347,7 +347,7 @@ export async function isRecentlyEnriched(
   id: string,
   maxAgeDays: number = 7,
 ): Promise<boolean> {
-  const supabase = await createClient();
+  const supabase = getAdminClient();
 
   const { data } = await supabase
     .from(table)

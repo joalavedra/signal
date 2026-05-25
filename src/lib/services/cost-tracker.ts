@@ -33,6 +33,12 @@ export const PRICING = {
   google_places_search: 0.032,
   // AgentMail -- usage-based pricing, ~$0.40 per 1,000 emails
   agentmail_email: 0.0004,
+  // Apollo -- credit-based; 1 credit ≈ $0.10 on Basic, less on higher tiers.
+  apollo_enrichment: 0.1,
+  apollo_search: 0.0,
+  apollo_sequence_enroll: 0.0,
+  // Attio -- no per-call charge on standard plans
+  attio_request: 0.0,
 } as const;
 
 // ── Action context (AsyncLocalStorage) ───────────────────────────────────
@@ -67,7 +73,9 @@ export type ServiceName =
   | "apify"
   | "browserbase"
   | "google"
-  | "agentmail";
+  | "agentmail"
+  | "apollo"
+  | "attio";
 
 interface UsageEntry {
   service: ServiceName;
