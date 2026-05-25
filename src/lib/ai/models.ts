@@ -1,19 +1,30 @@
 import { createDeepSeek } from "@ai-sdk/deepseek";
+import { wrapLanguageModel, defaultSettingsMiddleware } from "ai";
 
 const deepseek = createDeepSeek({
   apiKey: process.env.DEEPSEEK_API_KEY ?? "",
 });
 
 export const MODELS = {
-  AGENT: "deepseek-chat",
-  CHAT: "deepseek-chat",
+  AGENT: "deepseek-v4-flash",
+  CHAT: "deepseek-v4-flash",
 
-  EMAIL: "deepseek-chat",
+  EMAIL: "deepseek-v4-flash",
 
   BROWSER: "gemini-2.5-flash",
-  STRUCTURED: "deepseek-chat",
+  STRUCTURED: "deepseek-v4-flash",
 
-  LIGHT: "deepseek-chat",
+  LIGHT: "deepseek-v4-flash",
 } as const;
 
-export const llm = deepseek;
+// deepseek-v4-flash enables "thinking" mode by default. The agent is tool-
+// driven and runs many steps per turn, so we disable thinking to keep latency
+// and output-token cost down (matches the old deepseek-chat behavior).
+const noThinking = defaultSettingsMiddleware({
+  settings: {
+    providerOptions: { deepseek: { thinking: { type: "disabled" } } },
+  },
+});
+
+export const llm = (modelId: string) =>
+  wrapLanguageModel({ model: deepseek(modelId), middleware: noThinking });

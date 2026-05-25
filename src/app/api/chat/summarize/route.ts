@@ -67,12 +67,12 @@ export async function POST(request: Request) {
   });
 
   trackUsage({
-    service: "claude",
+    service: "deepseek",
     operation: "chat-summarize",
     tokens_input: usage.inputTokens ?? 0,
     tokens_output: usage.outputTokens ?? 0,
     estimated_cost_usd: estimateClaudeCostFromUsage("deepseek", usage),
-    metadata: { model: "claude-haiku-4.5", chatId },
+    metadata: { model: "deepseek-v4-flash", chatId },
     user_id: user.id,
   });
 

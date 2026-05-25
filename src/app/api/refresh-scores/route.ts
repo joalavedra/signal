@@ -177,13 +177,13 @@ ${wrapUntrusted(JSON.stringify(contactSummaries, null, 2))}`,
     });
 
     trackUsage({
-      service: "claude",
+      service: "deepseek",
       operation: "score-contacts",
       tokens_input: result.usage.inputTokens ?? 0,
       tokens_output: result.usage.outputTokens ?? 0,
       estimated_cost_usd: estimateClaudeCostFromUsage("deepseek", result.usage),
       metadata: {
-        model: "claude-sonnet-4",
+        model: "deepseek-v4-flash",
         contactsScored: result.object.scores.length,
         cache_creation_tokens: result.usage.inputTokenDetails?.cacheWriteTokens,
         cache_read_tokens: result.usage.inputTokenDetails?.cacheReadTokens,

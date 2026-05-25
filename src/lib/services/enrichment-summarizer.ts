@@ -60,7 +60,7 @@ ${wrapUntrusted(bodyText)}`,
     });
 
     trackUsage({
-      service: "claude",
+      service: "deepseek",
       operation: "summarize-website",
       tokens_input: usage.inputTokens ?? 0,
       tokens_output: usage.outputTokens ?? 0,
@@ -158,7 +158,7 @@ ${wrapUntrusted(body)}`,
     });
 
     trackUsage({
-      service: "claude",
+      service: "deepseek",
       operation: "summarize-person",
       tokens_input: usage.inputTokens ?? 0,
       tokens_output: usage.outputTokens ?? 0,
@@ -216,7 +216,7 @@ ${wrapUntrusted(payload)}`,
     });
 
     trackUsage({
-      service: "claude",
+      service: "deepseek",
       operation: "summarize-search-results",
       tokens_input: usage.inputTokens ?? 0,
       tokens_output: usage.outputTokens ?? 0,

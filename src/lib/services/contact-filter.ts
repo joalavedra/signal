@@ -200,13 +200,13 @@ ${wrapUntrusted(combinedContent.slice(0, 12000))}`,
     });
 
     trackUsage({
-      service: "claude",
+      service: "deepseek",
       operation: "domain-people-extract",
       tokens_input: usage.inputTokens ?? 0,
       tokens_output: usage.outputTokens ?? 0,
       estimated_cost_usd: estimateClaudeCostFromUsage("deepseek", usage),
       metadata: {
-        model: "claude-haiku-4-5",
+        model: "deepseek-v4-flash",
         domain,
         pagesScraped: scrapedContent.length,
         peopleFound: object.people.length,
@@ -328,13 +328,13 @@ Rules:
     });
 
     trackUsage({
-      service: "claude",
+      service: "deepseek",
       operation: "contact-filter",
       tokens_input: usage.inputTokens ?? 0,
       tokens_output: usage.outputTokens ?? 0,
       estimated_cost_usd: estimateClaudeCostFromUsage("deepseek", usage),
       metadata: {
-        model: "claude-haiku-4-5",
+        model: "deepseek-v4-flash",
         companyName: company.name,
         candidateCount: preFiltered.length,
         verifiedCount: object.verified.length,

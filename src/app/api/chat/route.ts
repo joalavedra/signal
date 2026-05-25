@@ -112,13 +112,13 @@ export async function POST(request: Request) {
         },
         onFinish({ usage }) {
           trackUsage({
-            service: "claude",
+            service: "deepseek",
             operation: "chat",
             tokens_input: usage.inputTokens ?? 0,
             tokens_output: usage.outputTokens ?? 0,
             estimated_cost_usd: estimateClaudeCostFromUsage("deepseek", usage),
             metadata: {
-              model: "claude-sonnet-4-6",
+              model: "deepseek-v4-flash",
               cache_creation_tokens: usage.inputTokenDetails?.cacheWriteTokens,
               cache_read_tokens: usage.inputTokenDetails?.cacheReadTokens,
             },

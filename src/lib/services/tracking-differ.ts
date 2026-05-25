@@ -157,7 +157,7 @@ Assign each title exactly one category from: engineering, sales, marketing, oper
   });
 
   trackUsage({
-    service: "claude",
+    service: "deepseek",
     operation: "classify-roles",
     tokens_input: usage.inputTokens ?? 0,
     tokens_output: usage.outputTokens ?? 0,
